@@ -157,6 +157,11 @@ starting from scratch. Therefore, to avoid having those kinds of issues,
 the options above should be enacted either globally or at the very least
 on each project.
 
+**If you are not using RStudio**, then you should create a file named
+“.here” (see /software/R\_libs/R400/here/help/here) in the directory
+where your project will be, and always start your session in that
+directory so that R knows your relative file paths.
+
 ## Downloading recount Data
 
 Recount provides instructions on downloading data at
@@ -176,8 +181,7 @@ Alternatively, you can download a data file corresponding to the lung
 data, and use it. We will use this example file for all of our other
 example data processing.
 
-    proj_loc = here::here()
-    download.file("http://duffel.rail.bio/recount/v2/TCGA/rse_gene_lung.Rdata", destfile = file.path(proj_loc, "data_files/rse_gene_lung.Rdata"))
+    download.file("http://duffel.rail.bio/recount/v2/TCGA/rse_gene_lung.Rdata", destfile = here::here("data_files/rse_gene_lung.Rdata"))
 
 Alternatively, you can download it using this link:
 <http://duffel.rail.bio/recount/v2/TCGA/rse_gene_lung.Rdata>
@@ -189,8 +193,7 @@ and information about the samples in the data. We do it this way to make
 some other things easier.
 
     library(recount)
-    proj_loc = here::here()
-    load(file.path(proj_loc, "data_files/rse_gene_lung.Rdata"))
+    load(here::here("data_files/rse_gene_lung.Rdata"))
     gene_counts = assays(rse_gene)$counts
     sample_data = colData(rse_gene)
 
@@ -211,19 +214,18 @@ some other things easier.
     scaled_data = scale_counts(rse_gene)
     scaled_counts = assays(scaled_data)$counts
 
-    saveRDS(gene_counts, file = file.path(proj_loc, "data_files/recount_lung_original_counts.rds"))
-    saveRDS(sample_info, file = file.path(proj_loc, "data_files/recount_lung_sample_info.rds"))
-    saveRDS(scaled_counts, file = file.path(proj_loc, "data_files/recount_lung_scaled_counts.rds"))
-    saveRDS(gene_info, file = file.path(proj_loc, "data_files/recount_lung_gene_info.rds"))
+    saveRDS(gene_counts, file = here::here("data_files/recount_lung_original_counts.rds"))
+    saveRDS(sample_info, file = here::here("data_files/recount_lung_sample_info.rds"))
+    saveRDS(scaled_counts, file = here::here("data_files/recount_lung_scaled_counts.rds"))
+    saveRDS(gene_info, file = here::here("data_files/recount_lung_gene_info.rds"))
 
 ## Downloading ARCHS4 Data
 
 For ARCHS4, we download the full data set (human is 12 GB, mouse is
 probably larger), and then subset it by samples of interest.
 
-    proj_loc = here::here()
-    destination_file = file.path(proj_loc, "data_files/archs4_human_matrix_v9.h5")
-    extracted_expression_file = file.path(proj_loc, "data_files/archs4_LUNG_expression_matrix.tsv")
+    destination_file = here::here("data_files/archs4_human_matrix_v9.h5")
+    extracted_expression_file = here::here("data_files/archs4_LUNG_expression_matrix.tsv")
     url = "https://s3.amazonaws.com/mssm-seq-matrix/human_matrix_v9.h5"
 
     # Check if gene expression file was already downloaded, if not in current directory download file form repository
@@ -234,11 +236,10 @@ probably larger), and then subset it by samples of interest.
 
 ### Getting Useful Data Out
 
-    proj_loc = here::here()
-    lung_samples = readLines(file.path(proj_loc, "data_files/archs4_lung_samplelist.txt"))
+    lung_samples = readLines(here::here("data_files/archs4_lung_samplelist.txt"))
 
     library("rhdf5")
-    human_file = file.path(proj_loc, "data_files/archs4_human_matrix_v9.h5")
+    human_file = here::here("data_files/archs4_human_matrix_v9.h5")
     # you can see what is in the file
     h5ls(human_file)
 
@@ -257,8 +258,8 @@ probably larger), and then subset it by samples of interest.
                              title = titles[sample_locations],
                              series = series[sample_locations])
 
-    saveRDS(expression, file.path(proj_loc, "data_files/archs4_lung_counts.rds")_
-    saveRDS(sample_info, file.path(proj_loc, "data_files/archs4_lung_sample_info.rds"))
+    saveRDS(expression, here::here("data_files/archs4_lung_counts.rds")_
+    saveRDS(sample_info, here::here("data_files/archs4_lung_sample_info.rds"))
 
 ## Running An Analysis
 
