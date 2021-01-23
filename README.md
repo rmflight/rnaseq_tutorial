@@ -66,13 +66,14 @@ read about elsewhere.
 R makes code available as packages. We will be using several hosted on
 CRAN (the official R package repository), as well as some from
 Bioconductor, and some written by Dr. Flight. Installing packages we use
-the command `install.packages(“packageName”)`.
+the command `install.packages("packageName")`.
 
-For example, we can start by installing the remotes package, which will
-be used to install some other packages we will use. You can type the
-command below into the R console part of RStudio
+For example, we can start by installing the “here” and “remotes”
+package, which will be used to install some other packages we will use.
+You can type the command below into the R console part of RStudio
 
-    install.packages(“remotes”)
+    install.packages("here")
+    install.packages("remotes")
 
 Please type the command yourself, and don’t copy paste! Typing it helps
 you to build proficiency and a muscle memory that will become further
@@ -102,20 +103,21 @@ If it executed correctly, it should tell you at the end.
 Other packages we will need to install include:
 
     # provides really nice plotting abilities
-    install.packages(“ggplot2”) 
+    install.packages("ggplot2") 
     # provides access to biologically related packages in Bioconductor
-    install.packages(“BiocManager”) 
+    install.packages("BiocManager") 
 
 We can then use `BiocManager` to install biologically related packages.
 
     # loads BiocManager so you can use it
     library(BiocManager) 
     # runs the BiocManager command install
-    BiocManager::install(“recount”) 
+    BiocManager::install("recount") 
     # installs DEseq2 package
-    BiocManager::install(“DEseq2”) 
+    BiocManager::install("DEseq2") 
     # installs a package used for quality control and analysis
-    remotes::install(“MoseleyBioinformaticsLab/visualizationQualityControl”) 
+    remotes::install("MoseleyBioinformaticsLab/visualizationQualityControl")
+    remotes::install("rmflight/categoryCompare2")
 
 While these are installing, you should notice lots of other packages
 being installed as well. Hopefully none of them are generating errors
@@ -162,7 +164,8 @@ Alternatively, you can download a data file corresponding to the lung
 data, and use it. We will use this example file for all of our other
 example data processing.
 
-    download.file("http://duffel.rail.bio/recount/v2/TCGA/rse_gene_lung.Rdata", destfile = "data_files/rse_gene_lung.Rdata")
+    proj_loc = here::here()
+    download.file("http://duffel.rail.bio/recount/v2/TCGA/rse_gene_lung.Rdata", destfile = file.path(proj_loc, "data_files/rse_gene_lung.Rdata"))
 
 Alternatively, you can download it using this link:
 <http://duffel.rail.bio/recount/v2/TCGA/rse_gene_lung.Rdata>
@@ -174,7 +177,8 @@ and information about the samples in the data. We do it this way to make
 some other things easier.
 
     library(recount)
-    load("data_files/rse_gene_lung.Rdata")
+    proj_loc = here::here()
+    load(file.path(proj_loc, "data_files/rse_gene_lung.Rdata"))
     gene_counts = assays(rse_gene)$counts
     sample_data = colData(rse_gene)
 
@@ -195,18 +199,19 @@ some other things easier.
     scaled_data = scale_counts(rse_gene)
     scaled_counts = assays(scaled_data)$counts
 
-    saveRDS(gene_counts, file = "data_files/recount_lung_original_counts.rds")
-    saveRDS(sample_info, file = "data_files/recount_lung_sample_info.rds")
-    saveRDS(scaled_counts, file = "data_files/recount_lung_scaled_counts.rds")
-    saveRDS(gene_info, file = "data_files/recount_lung_gene_info.rds")
+    saveRDS(gene_counts, file = file.path(proj_loc, "data_files/recount_lung_original_counts.rds"))
+    saveRDS(sample_info, file = file.path(proj_loc, "data_files/recount_lung_sample_info.rds"))
+    saveRDS(scaled_counts, file = file.path(proj_loc, "data_files/recount_lung_scaled_counts.rds"))
+    saveRDS(gene_info, file = file.path(proj_loc, "data_files/recount_lung_gene_info.rds"))
 
 ## Downloading ARCHS4 Data
 
 For ARCHS4, we download the full data set (human is 12 GB, mouse is
 probably larger), and then subset it by samples of interest.
 
-    destination_file = "data_files/archs4_human_matrix_v9.h5"
-    extracted_expression_file = "data_files/archs4_LUNG_expression_matrix.tsv"
+    proj_loc = here::here()
+    destination_file = file.path(proj_loc, "data_files/archs4_human_matrix_v9.h5")
+    extracted_expression_file = file.path(proj_loc, "data_files/archs4_LUNG_expression_matrix.tsv")
     url = "https://s3.amazonaws.com/mssm-seq-matrix/human_matrix_v9.h5"
 
     # Check if gene expression file was already downloaded, if not in current directory download file form repository
@@ -217,20 +222,21 @@ probably larger), and then subset it by samples of interest.
 
 ### Getting Useful Data Out
 
-    lung_samples = readLines("data_files/archs4_lung_samplelist.txt")
+    proj_loc = here::here()
+    lung_samples = readLines(file.path(proj_loc, "data_files/archs4_lung_samplelist.txt"))
 
     library("rhdf5")
-
+    human_file = file.path(proj_loc, "data_files/archs4_human_matrix_v9.h5")
     # you can see what is in the file
-    h5ls("data_files/archs4_human_matrix_v9.h5")
+    h5ls(human_file)
 
-    samples = h5read("data_files/archs4_human_matrix_v9.h5", "meta/samples/geo_accession")
-    genes = h5read("data_files/archs4_human_matrix_v9.h5", "meta/genes/genes")
-    titles = h5read("data_files/archs4_human_matrix_v9.h5", "meta/samples/title")
-    series = h5read("data_files/archs4_human_matrix_v9.h5", "meta/samples/series_id")
+    samples = h5read(human_file, "meta/samples/geo_accession")
+    genes = h5read(human_file, "meta/genes/genes")
+    titles = h5read(human_file, "meta/samples/title")
+    series = h5read(human_file, "meta/samples/series_id")
 
     sample_locations = which(samples %in% lung_samples)
-    expression = t(h5read("data_files/archs4_human_matrix_v9.h5", "data/expression", index=list(sample_locations, 1:length(genes))))
+    expression = t(h5read(human_file, "data/expression", index=list(sample_locations, 1:length(genes))))
 
     colnames(expression) = samples[sample_locations]
     rownames(expression) = genes
@@ -239,5 +245,5 @@ probably larger), and then subset it by samples of interest.
                              title = titles[sample_locations],
                              series = series[sample_locations])
 
-    saveRDS(expression, "data_files/archs4_lung_counts.rds")
-    saveRDS(sample_info, "data_files/archs4_lung_sample_info.rds")
+    saveRDS(expression, file.path(proj_loc, "data_files/archs4_lung_counts.rds")_
+    saveRDS(sample_info, file.path(proj_loc, "data_files/archs4_lung_sample_info.rds"))
