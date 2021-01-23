@@ -17,8 +17,8 @@ in, and see if there are any datasets in ARCHS4 or recount2 that may be
 suitable. Make sure to make a list of experiment IDs or links to share
 with your mentor!
 
-ARCHS4 link: <https://maayanlab.cloud/archs4/> Recount2 link:
-<https://jhubiostatistics.shinyapps.io/recount/>
+-   ARCHS4 link: <https://maayanlab.cloud/archs4/>
+-   Recount2 link: <https://jhubiostatistics.shinyapps.io/recount/>
 
 Discuss the possible data sets with your mentor before proceeding to
 attempt to download any data.
@@ -60,6 +60,18 @@ This provides the Console, where R code is actually executed;
 Environment, displaying which objects are present; History, providing a
 history of which commands have been run; and several other panes you can
 read about elsewhere.
+
+## Alternatives to RStudio
+
+### VSCode
+
+The only recommendation for another editor for working in R I’ve seen is
+for VSCode (unless you already use EMacs or Vim for everything. If
+that’s you, you probably don’t need my guidance). There are some
+[guidelines to using R in
+VSCode](https://renkun.me/2019/12/11/writing-r-in-vscode-a-fresh-start/)
+by people who do it all the time. I recommend checking out the above
+link or searching for VSCode and R to find more information.
 
 ## Installing Packages
 
@@ -247,3 +259,10 @@ probably larger), and then subset it by samples of interest.
 
     saveRDS(expression, file.path(proj_loc, "data_files/archs4_lung_counts.rds")_
     saveRDS(sample_info, file.path(proj_loc, "data_files/archs4_lung_sample_info.rds"))
+
+## Running An Analysis
+
+OK, so we have data from transcriptomics experiments. What exactly
+happened to get this far?
+
+-   Ribonucl
