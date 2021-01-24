@@ -1,3 +1,23 @@
+-   [Finding Data](#finding-data)
+-   [Installing R & RStudio](#installing-r-rstudio)
+    -   [Windows](#windows)
+    -   [macOS](#macos)
+    -   [Linux](#linux)
+-   [Alternatives to RStudio](#alternatives-to-rstudio)
+    -   [VSCode](#vscode)
+-   [Installing Packages](#installing-packages)
+-   [Creating a Project](#creating-a-project)
+-   [Downloading recount Data](#downloading-recount-data)
+    -   [Extract Useful Data](#extract-useful-data)
+-   [Downloading ARCHS4 Data](#downloading-archs4-data)
+    -   [Getting Useful Data Out](#getting-useful-data-out)
+-   [Running An Analysis](#running-an-analysis)
+    -   [Determining Useful Samples &
+        Subsampling](#determining-useful-samples-subsampling)
+        -   [Useful Samples](#useful-samples)
+    -   [Quality Control / Quality
+        Assurance](#quality-control-quality-assurance)
+
 This RNASeq transcriptomics analysis will be carried out using R, a
 statistical programming language and interactive environment. I
 recommend using the RStudio interactive development environment, because
@@ -263,7 +283,38 @@ probably larger), and then subset it by samples of interest.
 
 ## Running An Analysis
 
-OK, so we have data from transcriptomics experiments. What exactly
-happened to get this far?
+OK, so we have data from RNA-seq transcriptomics experiments. What
+exactly happened to get this far?
 
--   Ribonucl
+-   Messenger ribonucleic acid (mRNA) was extracted from cells
+-   High abundance RNAs were removed (probably)
+    -   Why would we do this? Which RNA would be in high abundance?
+        (Hint: the machinery to translate mRNA also contains RNA)
+-   Converted to DNA
+-   Amplified using PCR
+-   Sequenced, probably using some form of next-generation sequencing
+-   Those sequences are then aligned to a reference genome
+-   And then how many sequences align to each part of the genome give us
+    the counts above
+
+### Determining Useful Samples & Subsampling
+
+Depending on your computer’s RAM (random access memory), you may or may
+not be able to analyze all genes or samples at the same time, and if you
+tried to run the ARCHS4 extraction code above, you may have run out of
+RAM, and either had the process take forever, or had your computer crash
+completely.
+
+**Let your mentor know if your computer crashed and you still want to
+use ARCHS4 data!!**
+
+One thing we can do to reduce the compute requirements, and at least
+work out what code is going to work, is to:
+
+-   Subset to a more relevant set of samples, which is likely necessary
+    unless you are working with a rather simple single study.
+-   Subset to a more manageable set of genes and/or samples.
+
+#### Useful Samples
+
+### Quality Control / Quality Assurance
