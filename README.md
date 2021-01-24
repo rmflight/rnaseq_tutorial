@@ -12,6 +12,8 @@
     -   [Extract Useful Data](#extract-useful-data)
 -   [Downloading ARCHS4 Data](#downloading-archs4-data)
     -   [Getting Useful Data Out](#getting-useful-data-out)
+    -   [Notes on Saving & Reloading
+        Data](#notes-on-saving-reloading-data)
 -   [Running An Analysis](#running-an-analysis)
     -   [Determining Useful Samples &
         Subsampling](#determining-useful-samples-subsampling)
@@ -152,6 +154,7 @@ Other packages we will need to install include:
     install.packages("ggplot2") 
     # provides access to biologically related packages in Bioconductor
     install.packages("BiocManager") 
+    install.packages("dplyr")
 
 We can then use `BiocManager` to install biologically related packages.
 
@@ -320,6 +323,18 @@ probably larger), and then subset it by samples of interest.
     saveRDS(expression, here::here("data_files/archs4_lung_counts.rds")_
     saveRDS(sample_info, here::here("data_files/archs4_lung_sample_info.rds"))
 
+### Notes on Saving & Reloading Data
+
+In contrast to lots of tutorials where they recommend saving data using
+`save()`, I prefer `saveRDS()`. The reason is because `readRDS()` makes
+you assign the object to a new name, and that name can be whatever makes
+sense to you. `load()` will load the data with whatever name it had
+previously, which can be very, very annoying, especially for an analysis
+like this. So for example, if we want, we can load the `sample_info` we
+saved above with a different name:
+
+    info = readRDS(here::here("data_files/archs4_lung_sample_info.rds"))
+
 ## Running An Analysis
 
 OK, so we have data from RNA-seq transcriptomics experiments. What
@@ -356,6 +371,224 @@ work out what code is going to work, is to:
 
 #### Useful Samples
 
-Let’s see if
+Let’s see if we can subset the recount samples to something more
+reasonable than **all** of the samples.
+
+    library(dplyr)
+    lung_info = readRDS(here::here("data_files/recount_lung_sample_info.rds"))
+
+    knitr::kable(head(lung_info))
+
+<table>
+<colgroup>
+<col style="width: 4%" />
+<col style="width: 21%" />
+<col style="width: 4%" />
+<col style="width: 16%" />
+<col style="width: 14%" />
+<col style="width: 8%" />
+<col style="width: 7%" />
+<col style="width: 6%" />
+<col style="width: 16%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">project</th>
+<th style="text-align: left;">sample_id</th>
+<th style="text-align: left;">gender</th>
+<th style="text-align: left;">project_name</th>
+<th style="text-align: left;">race</th>
+<th style="text-align: left;">sample_type</th>
+<th style="text-align: left;">primary_site</th>
+<th style="text-align: left;">tumor_stage</th>
+<th style="text-align: left;">disease_type</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">TCGA</td>
+<td style="text-align: left;">191fe3d1-febf-4585-b6f4-263bfad4dd7e</td>
+<td style="text-align: left;">male</td>
+<td style="text-align: left;">Lung Squamous Cell Carcinoma</td>
+<td style="text-align: left;">not reported</td>
+<td style="text-align: left;">Primary Tumor</td>
+<td style="text-align: left;">Lung</td>
+<td style="text-align: left;">stage iia</td>
+<td style="text-align: left;">Lung Squamous Cell Carcinoma</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">TCGA</td>
+<td style="text-align: left;">672afeb7-e9aa-4a44-aa9c-ef6344ae5c5c</td>
+<td style="text-align: left;">male</td>
+<td style="text-align: left;">Lung Adenocarcinoma</td>
+<td style="text-align: left;">white</td>
+<td style="text-align: left;">Primary Tumor</td>
+<td style="text-align: left;">Lung</td>
+<td style="text-align: left;">stage iib</td>
+<td style="text-align: left;">Lung Adenocarcinoma</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">TCGA</td>
+<td style="text-align: left;">670d8333-6723-4b4f-b533-d2bff803a9bf</td>
+<td style="text-align: left;">female</td>
+<td style="text-align: left;">Lung Adenocarcinoma</td>
+<td style="text-align: left;">white</td>
+<td style="text-align: left;">Primary Tumor</td>
+<td style="text-align: left;">Lung</td>
+<td style="text-align: left;">stage ib</td>
+<td style="text-align: left;">Lung Adenocarcinoma</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">TCGA</td>
+<td style="text-align: left;">ab6c1203-4d5d-484a-abd9-9b333017b1ed</td>
+<td style="text-align: left;">male</td>
+<td style="text-align: left;">Lung Squamous Cell Carcinoma</td>
+<td style="text-align: left;">white</td>
+<td style="text-align: left;">Primary Tumor</td>
+<td style="text-align: left;">Lung</td>
+<td style="text-align: left;">stage iib</td>
+<td style="text-align: left;">Lung Squamous Cell Carcinoma</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">TCGA</td>
+<td style="text-align: left;">88860792-6084-41df-b3a1-7d36a2502b5a</td>
+<td style="text-align: left;">male</td>
+<td style="text-align: left;">Lung Squamous Cell Carcinoma</td>
+<td style="text-align: left;">white</td>
+<td style="text-align: left;">Primary Tumor</td>
+<td style="text-align: left;">Lung</td>
+<td style="text-align: left;">stage iia</td>
+<td style="text-align: left;">Lung Squamous Cell Carcinoma</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">TCGA</td>
+<td style="text-align: left;">4b3d8b07-8b44-45f3-be30-a0b6edbf8265</td>
+<td style="text-align: left;">male</td>
+<td style="text-align: left;">Lung Adenocarcinoma</td>
+<td style="text-align: left;">black or african american</td>
+<td style="text-align: left;">Primary Tumor</td>
+<td style="text-align: left;">Lung</td>
+<td style="text-align: left;">stage iiia</td>
+<td style="text-align: left;">Lung Adenocarcinoma</td>
+</tr>
+</tbody>
+</table>
+
+We can see from the table that we have a bunch of useful information:
+
+-   sample\_id: a sample id, that corresponds to the column names of our
+    expression data
+-   gender: what gender was the sample from
+-   project\_name: some information about the project
+-   race: what race of a person is the sample from
+-   sample\_type: what type of sample is it
+-   primary\_site: where is it thought that the primary tumor is from
+-   tumor\_stage: what stage is the tumor at
+-   disease\_type: what type of disease is it
+
+We can also get an idea of what is in the data asking what the unique
+values of each column are. The data we have is a data.frame, which is
+really a list underneath, so we can iterate over specific pieces using
+`purrr`.
+
+    dplyr::select(lung_info, gender, project_name, race, sample_type, primary_site, tumor_stage, disease_type) %>%
+      purrr::iwalk(., function(.x, .y){
+        message(.y)
+        print(unique(.x))
+      })
+
+    ## gender
+
+    ## [1] "male"   "female"
+
+    ## project_name
+
+    ## [1] "Lung Squamous Cell Carcinoma"
+    ## [2] "Lung Adenocarcinoma"
+
+    ## race
+
+    ## [1] "not reported"                    
+    ## [2] "white"                           
+    ## [3] "black or african american"       
+    ## [4] "asian"                           
+    ## [5] "american indian or alaska native"
+
+    ## sample_type
+
+    ## [1] "Primary Tumor"       "Solid Tissue Normal"
+    ## [3] "Recurrent Tumor"
+
+    ## primary_site
+
+    ## [1] "Lung"
+
+    ## tumor_stage
+
+    ##  [1] "stage iia"    "stage iib"    "stage ib"    
+    ##  [4] "stage iiia"   "stage iv"     "stage iiib"  
+    ##  [7] "stage ia"     "not reported" "stage i"     
+    ## [10] "stage ii"     "stage iii"
+
+    ## disease_type
+
+    ## [1] "Lung Squamous Cell Carcinoma"
+    ## [2] "Lung Adenocarcinoma"
+
+Using this information, we can start to think about how to slice and
+dice the data. For example, we probably want to use only one type of
+lung cancer, and there are two types here. We also want to work with
+primary tumors only, and also those that are from a higher stage.
+
+We start with 1156 total samples.
+
+    small_lung = dplyr::filter(lung_info, 
+                               disease_type == "Lung Squamous Cell Carcinoma",
+                               !(tumor_stage %in% c("not reported", "stage ia", "stage i")),
+                               !(sample_type %in% c("Recurrent Tumor")))
+
+This gives us 451 samples. Lets verify that we only have what we want:
+
+    dplyr::select(small_lung, disease_type, tumor_stage, sample_type) %>%
+      purrr::iwalk(., function(.x, .y){
+        message(.y)
+        print(unique(.x))
+      })
+
+    ## disease_type
+
+    ## [1] "Lung Squamous Cell Carcinoma"
+
+    ## tumor_stage
+
+    ## [1] "stage iia"  "stage iib"  "stage iv"  
+    ## [4] "stage ib"   "stage iiib" "stage iiia"
+    ## [7] "stage ii"   "stage iii"
+
+    ## sample_type
+
+    ## [1] "Primary Tumor"       "Solid Tissue Normal"
+
+We also need to add something that is a bit more useful as an identifier
+of “normal” and “cancerous” tissue.
+
+    small_lung = dplyr::mutate(
+      small_lung,
+      disease = dplyr::case_when(
+        grepl("Tumor", sample_type) ~ "cancer",
+        grepl("Normal", sample_type) ~ "normal"
+      ))
+
+    unique(small_lung$disease)
+
+    ## [1] "cancer" "normal"
+
+    table(small_lung$disease)
+
+    ## 
+    ## cancer normal 
+    ##    407     44
+
+So, severely unbalanced, with 407 and only 44.
 
 ### Quality Control / Quality Assurance

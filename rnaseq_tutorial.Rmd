@@ -1,7 +1,10 @@
 ---
 title: "RNASeq Analysis Tutorial"
 author: "Robert M Flight"
-output: md_document
+output: 
+  md_document:
+    toc: true
+    toc_depth: 4
 editor_options: 
   chunk_output_type: console
 ---
@@ -20,6 +23,13 @@ You should think about a disease or condition you might be interested in, and se
 Discuss the possible data sets with your mentor before proceeding to attempt to download any data.
 
 ## Installing R & RStudio
+
+We are going to use R, a data analysis programming language.
+If you want to learn about using it in general, there are several good tutorials you can check out.
+
+* [swirl](https://swirlstats.com/students.html): an interactive tutorial that runs within R itself.
+* [R for Data Science](https://r4ds.had.co.nz/): a book on general data processing. The HTML version of the book is free.
+* [Teacup Giraffes](https://tinystats.github.io/teacups-giraffes-and-statistics/index.html): an introductory course that introduces running things in R and how to get some simple statistics out.
 
 ### Windows
 
@@ -98,6 +108,7 @@ Other packages we will need to install include:
 install.packages("ggplot2") 
 # provides access to biologically related packages in Bioconductor
 install.packages("BiocManager") 
+install.packages("dplyr")
 ```
 
 We can then use `BiocManager` to install biologically related packages.
@@ -117,6 +128,24 @@ remotes::install("rmflight/categoryCompare2")
 While these are installing, you should notice lots of other packages being installed as well. 
 Hopefully none of them are generating errors while they are installing.
 
+### About Installation Commands
+
+Some information on what we did above:
+
+* `library()` is a function for loading up an installed package. The command `library` is the function, and you tell the function it's arguments with the brackets `()`. If you call the function name without `()`, R will actually print the function definition.
+* `BiocManager` is a package for managing packages from the [Bioconductor](https://bioconductor.org) project.
+* `BiocManager::install()` is calling the `install()` function from the `BiocManager` package. It is slightly faster than doing this:
+
+```{r show_library_call, eval = FALSE}
+library(BiocManager)
+install("DEseq2")
+```
+
+* The `package::function()` only works if a package and it's dependencies are installed, obviously.
+* It can be very useful when you know exactly what function you need, and you are only going to need one.
+* It's also useful when there are several packages that have the same function name, you make sure you are calling the correct one.
+
+
 ## Creating a Project
 
 Now we need to create our analysis project, where all of the data and code are going to live. You can create a new project using the “Projects” option on the global toolbar, it should be at the furthest right corner. More on using RStudio projects is available here: https://support.rstudio.com/hc/en-us/articles/200526207-Using-Projects
@@ -135,6 +164,8 @@ Project
 Many errors in analyses are caused by having old data loaded instead of starting from scratch. 
 Therefore, to avoid having those kinds of issues, the options above should be enacted either globally or at the very least on each project.
 
+**If you are not using RStudio**, then you should create a file named ".here" (see `r ?here::here`) in the directory where your project will be, and always start your session in that directory so that R knows your relative file paths.
+
 ## Downloading recount Data
 
 Recount provides instructions on downloading data at https://jhubiostatistics.shinyapps.io/recount/
@@ -144,7 +175,7 @@ In short, you choose an identifier that corresponds to the data you want, say �
 ```{r download_data, eval = FALSE}
 library('recount')
 # make sure to change the STUDY ID to a real one!
-url <- download_study('SRX10000')
+url = download_study('SRX10000')
 url 
 # loading the data to work with it
 load(file.path("SRX10000", "rse_gene.RData"))
@@ -155,8 +186,7 @@ Alternatively, you can download a data file corresponding to the lung data, and 
 We will use this example file for all of our other example data processing.
 
 ```{r download_lung, eval = FALSE}
-proj_loc = here::here()
-download.file("http://duffel.rail.bio/recount/v2/TCGA/rse_gene_lung.Rdata", destfile = file.path(proj_loc, "data_files/rse_gene_lung.Rdata"))
+download.file("http://duffel.rail.bio/recount/v2/TCGA/rse_gene_lung.Rdata", destfile = here::here("data_files/rse_gene_lung.Rdata"))
 ```
 
 Alternatively, you can download it using this link: http://duffel.rail.bio/recount/v2/TCGA/rse_gene_lung.Rdata
@@ -167,8 +197,7 @@ We want to extract both the original gene level counts, scaled counts, and infor
 
 ```{r extract_data, eval=FALSE}
 library(recount)
-proj_loc = here::here()
-load(file.path(proj_loc, "data_files/rse_gene_lung.Rdata"))
+load(here::here("data_files/rse_gene_lung.Rdata"))
 gene_counts = assays(rse_gene)$counts
 sample_data = colData(rse_gene)
 
@@ -189,10 +218,10 @@ gene_info = as.data.frame(mcols(gene_data))
 scaled_data = scale_counts(rse_gene)
 scaled_counts = assays(scaled_data)$counts
 
-saveRDS(gene_counts, file = file.path(proj_loc, "data_files/recount_lung_original_counts.rds"))
-saveRDS(sample_info, file = file.path(proj_loc, "data_files/recount_lung_sample_info.rds"))
-saveRDS(scaled_counts, file = file.path(proj_loc, "data_files/recount_lung_scaled_counts.rds"))
-saveRDS(gene_info, file = file.path(proj_loc, "data_files/recount_lung_gene_info.rds"))
+saveRDS(gene_counts, file = here::here("data_files/recount_lung_original_counts.rds"))
+saveRDS(sample_info, file = here::here("data_files/recount_lung_sample_info.rds"))
+saveRDS(scaled_counts, file = here::here("data_files/recount_lung_scaled_counts.rds"))
+saveRDS(gene_info, file = here::here("data_files/recount_lung_gene_info.rds"))
 ```
 
 ## Downloading ARCHS4 Data
@@ -200,9 +229,8 @@ saveRDS(gene_info, file = file.path(proj_loc, "data_files/recount_lung_gene_info
 For ARCHS4, we download the full data set (human is 12 GB, mouse is probably larger), and then subset it by samples of interest.
 
 ```{r get_archs4, eval = FALSE}
-proj_loc = here::here()
-destination_file = file.path(proj_loc, "data_files/archs4_human_matrix_v9.h5")
-extracted_expression_file = file.path(proj_loc, "data_files/archs4_LUNG_expression_matrix.tsv")
+destination_file = here::here("data_files/archs4_human_matrix_v9.h5")
+extracted_expression_file = here::here("data_files/archs4_LUNG_expression_matrix.tsv")
 url = "https://s3.amazonaws.com/mssm-seq-matrix/human_matrix_v9.h5"
 
 # Check if gene expression file was already downloaded, if not in current directory download file form repository
@@ -216,11 +244,10 @@ if(!file.exists(destination_file)){
 
 
 ```{r archs4_useful, eval = FALSE}
-proj_loc = here::here()
-lung_samples = readLines(file.path(proj_loc, "data_files/archs4_lung_samplelist.txt"))
+lung_samples = readLines(here::here("data_files/archs4_lung_samplelist.txt"))
 
 library("rhdf5")
-human_file = file.path(proj_loc, "data_files/archs4_human_matrix_v9.h5")
+human_file = here::here("data_files/archs4_human_matrix_v9.h5")
 # you can see what is in the file
 h5ls(human_file)
 
@@ -239,13 +266,119 @@ sample_info = data.frame(sample_id = samples[sample_locations],
                          title = titles[sample_locations],
                          series = series[sample_locations])
 
-saveRDS(expression, file.path(proj_loc, "data_files/archs4_lung_counts.rds")_
-saveRDS(sample_info, file.path(proj_loc, "data_files/archs4_lung_sample_info.rds"))
+saveRDS(expression, here::here("data_files/archs4_lung_counts.rds")_
+saveRDS(sample_info, here::here("data_files/archs4_lung_sample_info.rds"))
+```
+
+### Notes on Saving & Reloading Data
+
+In contrast to lots of tutorials where they recommend saving data using `save()`, I prefer `saveRDS()`. 
+The reason is because `readRDS()` makes you assign the object to a new name, and that name can be whatever makes sense to you.
+`load()` will load the data with whatever name it had previously, which can be very, very annoying, especially for an analysis like this.
+So for example, if we want, we can load the `sample_info` we saved above with a different name:
+
+```{r load_example, eval = FALSE}
+info = readRDS(here::here("data_files/archs4_lung_sample_info.rds"))
 ```
 
 ## Running An Analysis
 
-OK, so we have data from transcriptomics experiments.
+OK, so we have data from RNA-seq transcriptomics experiments.
 What exactly happened to get this far?
 
-* Ribonucl
+* Messenger ribonucleic acid (mRNA) was extracted from cells
+* High abundance RNAs were removed (probably)
+  * Why would we do this? Which RNA would be in high abundance? (Hint: the machinery to translate mRNA also contains RNA)
+* Converted to DNA
+* Amplified using PCR
+* Sequenced, probably using some form of next-generation sequencing
+* Those sequences are then aligned to a reference genome
+* And then how many sequences align to each part of the genome give us the counts above
+
+### Determining Useful Samples & Subsampling
+
+Depending on your computer's RAM (random access memory), you may or may not be able to analyze all genes or samples at the same time, and if you tried to run the ARCHS4 extraction code above, you may have run out of RAM, and either had the process take forever, or had your computer crash completely.
+
+**Let your mentor know if your computer crashed and you still want to use ARCHS4 data!!**
+
+One thing we can do to reduce the compute requirements, and at least work out what code is going to work, is to:
+
+* Subset to a more relevant set of samples, which is likely necessary unless you are working with a rather simple single study.
+* Subset to a more manageable set of genes and/or samples.
+
+#### Useful Samples
+
+Let's see if we can subset the recount samples to something more reasonable than **all** of the samples.
+
+```{r useful_recount}
+library(dplyr)
+lung_info = readRDS(here::here("data_files/recount_lung_sample_info.rds"))
+
+knitr::kable(head(lung_info))
+```
+
+We can see from the table that we have a bunch of useful information:
+
+* sample_id: a sample id, that corresponds to the column names of our expression data
+* gender: what gender was the sample from
+* project_name: some information about the project
+* race: what race of a person is the sample from
+* sample_type: what type of sample is it
+* primary_site: where is it thought that the primary tumor is from
+* tumor_stage: what stage is the tumor at
+* disease_type: what type of disease is it
+
+We can also get an idea of what is in the data asking what the unique values of each column are.
+The data we have is a data.frame, which is really a list underneath, so we can iterate over specific pieces using `purrr`.
+
+```{r table_summary}
+dplyr::select(lung_info, gender, project_name, race, sample_type, primary_site, tumor_stage, disease_type) %>%
+  purrr::iwalk(., function(.x, .y){
+    message(.y)
+    print(unique(.x))
+  })
+```
+
+Using this information, we can start to think about how to slice and dice the data.
+For example, we probably want to use only one type of lung cancer, and there are two types here.
+We also want to work with primary tumors only, and also those that are from a higher stage.
+
+We start with `r nrow(lung_info)` total samples.
+
+```{r filter_samples}
+small_lung = dplyr::filter(lung_info, 
+                           disease_type == "Lung Squamous Cell Carcinoma",
+                           !(tumor_stage %in% c("not reported", "stage ia", "stage i")),
+                           !(sample_type %in% c("Recurrent Tumor")))
+```
+
+This gives us `r nrow(small_lung)` samples.
+Lets verify that we only have what we want:
+
+```{r double_check_filter}
+dplyr::select(small_lung, disease_type, tumor_stage, sample_type) %>%
+  purrr::iwalk(., function(.x, .y){
+    message(.y)
+    print(unique(.x))
+  })
+```
+
+We also need to add something that is a bit more useful as an identifier of "normal" and "cancerous" tissue.
+
+```{r label_cancer_normal}
+small_lung = dplyr::mutate(
+  small_lung,
+  disease = dplyr::case_when(
+    grepl("Tumor", sample_type) ~ "cancer",
+    grepl("Normal", sample_type) ~ "normal"
+  ))
+
+unique(small_lung$disease)
+
+table(small_lung$disease)
+```
+
+So, severely unbalanced, with `r sum(grepl("cancer", small_lung$disease))` and only `r sum(grepl("normal", small_lung$disease))`.
+
+
+### Quality Control / Quality Assurance
