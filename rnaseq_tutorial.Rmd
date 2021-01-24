@@ -348,7 +348,7 @@ We start with `r nrow(lung_info)` total samples.
 ```{r filter_samples}
 small_lung = dplyr::filter(lung_info, 
                            disease_type == "Lung Squamous Cell Carcinoma",
-                           !(tumor_stage %in% c("not reported", "stage ia", "stage i")),
+                           !(tumor_stage %in% c("not reported", "stage ia", "stage i", "stage ib")),
                            !(sample_type %in% c("Recurrent Tumor")))
 ```
 

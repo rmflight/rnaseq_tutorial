@@ -544,10 +544,10 @@ We start with 1156 total samples.
 
     small_lung = dplyr::filter(lung_info, 
                                disease_type == "Lung Squamous Cell Carcinoma",
-                               !(tumor_stage %in% c("not reported", "stage ia", "stage i")),
+                               !(tumor_stage %in% c("not reported", "stage ia", "stage i", "stage ib")),
                                !(sample_type %in% c("Recurrent Tumor")))
 
-This gives us 451 samples. Lets verify that we only have what we want:
+This gives us 279 samples. Lets verify that we only have what we want:
 
     dplyr::select(small_lung, disease_type, tumor_stage, sample_type) %>%
       purrr::iwalk(., function(.x, .y){
@@ -562,8 +562,8 @@ This gives us 451 samples. Lets verify that we only have what we want:
     ## tumor_stage
 
     ## [1] "stage iia"  "stage iib"  "stage iv"  
-    ## [4] "stage ib"   "stage iiib" "stage iiia"
-    ## [7] "stage ii"   "stage iii"
+    ## [4] "stage iiib" "stage iiia" "stage ii"  
+    ## [7] "stage iii"
 
     ## sample_type
 
@@ -587,8 +587,8 @@ of “normal” and “cancerous” tissue.
 
     ## 
     ## cancer normal 
-    ##    407     44
+    ##    255     24
 
-So, severely unbalanced, with 407 and only 44.
+So, severely unbalanced, with 255 and only 24.
 
 ### Quality Control / Quality Assurance
