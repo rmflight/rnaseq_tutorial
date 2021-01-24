@@ -6,6 +6,7 @@
 -   [Alternatives to RStudio](#alternatives-to-rstudio)
     -   [VSCode](#vscode)
 -   [Installing Packages](#installing-packages)
+    -   [About Installation Commands](#about-installation-commands)
 -   [Creating a Project](#creating-a-project)
 -   [Downloading recount Data](#downloading-recount-data)
     -   [Extract Useful Data](#extract-useful-data)
@@ -44,6 +45,19 @@ Discuss the possible data sets with your mentor before proceeding to
 attempt to download any data.
 
 ## Installing R & RStudio
+
+We are going to use R, a data analysis programming language. If you want
+to learn about using it in general, there are several good tutorials you
+can check out.
+
+-   [swirl](https://swirlstats.com/students.html): an interactive
+    tutorial that runs within R itself.
+-   [R for Data Science](https://r4ds.had.co.nz/): a book on general
+    data processing. The HTML version of the book is free.
+-   [Teacup
+    Giraffes](https://tinystats.github.io/teacups-giraffes-and-statistics/index.html):
+    an introductory course that introduces running things in R and how
+    to get some simple statistics out.
 
 ### Windows
 
@@ -155,6 +169,31 @@ While these are installing, you should notice lots of other packages
 being installed as well. Hopefully none of them are generating errors
 while they are installing.
 
+### About Installation Commands
+
+Some information on what we did above:
+
+-   `library()` is a function for loading up an installed package. The
+    command `library` is the function, and you tell the function it’s
+    arguments with the brackets `()`. If you call the function name
+    without `()`, R will actually print the function definition.
+-   `BiocManager` is a package for managing packages from the
+    [Bioconductor](https://bioconductor.org) project.
+-   `BiocManager::install()` is calling the `install()` function from
+    the `BiocManager` package. It is slightly faster than doing this:
+
+<!-- -->
+
+    library(BiocManager)
+    install("DEseq2")
+
+-   The `package::function()` only works if a package and it’s
+    dependencies are installed, obviously.
+-   It can be very useful when you know exactly what function you need,
+    and you are only going to need one.
+-   It’s also useful when there are several packages that have the same
+    function name, you make sure you are calling the correct one.
+
 ## Creating a Project
 
 Now we need to create our analysis project, where all of the data and
@@ -192,7 +231,7 @@ want, say “SRX10000”, and ask recount to download it for you.
 
     library('recount')
     # make sure to change the STUDY ID to a real one!
-    url <- download_study('SRX10000')
+    url = download_study('SRX10000')
     url 
     # loading the data to work with it
     load(file.path("SRX10000", "rse_gene.RData"))
@@ -316,5 +355,7 @@ work out what code is going to work, is to:
 -   Subset to a more manageable set of genes and/or samples.
 
 #### Useful Samples
+
+Let’s see if
 
 ### Quality Control / Quality Assurance
