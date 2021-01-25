@@ -375,6 +375,18 @@ Let’s see if we can subset the recount samples to something more
 reasonable than **all** of the samples.
 
     library(dplyr)
+
+    ## 
+    ## Attaching package: 'dplyr'
+
+    ## The following objects are masked from 'package:stats':
+    ## 
+    ##     filter, lag
+
+    ## The following objects are masked from 'package:base':
+    ## 
+    ##     intersect, setdiff, setequal, union
+
     lung_info = readRDS(here::here("data_files/recount_lung_sample_info.rds"))
 
     knitr::kable(head(lung_info))
@@ -590,5 +602,39 @@ of “normal” and “cancerous” tissue.
     ##    255     24
 
 So, severely unbalanced, with 255 and only 24.
+
+But now we can make a smaller version of the lung data with just these
+samples.
+
+    # we have to transform this to upper because that is what is on the matrix
+    small_lung = dplyr::mutate(small_lung, sample_id2 = toupper(sample_id))
+    lung_matrix = readRDS(here::here("data_files/recount_lung_original_counts.rds"))
+
+    small_matrix = lung_matrix[, small_lung$sample_id2]
+    dim(small_matrix)
+
+    ## [1] 58037   279
+
+    saveRDS(small_lung, file = here::here("data_files/small_lung_info.rds"))
+    saveRDS(small_matrix, file = here::here("data_files/small_lung_original_counts.rds"))
+
+In addition to using the smaller set of samples, we can also select a
+smaller set of genes. We will look first for those that have a non-zero
+value in at least one sample. And then we will take a random sample of
+those.
+
+    set.seed(1234)
+    is_1 = purrr::map_lgl(seq(1, nrow(small_matrix)), function(in_row){
+      sum(small_matrix[in_row, ] > 0) > 0
+    })
+    use_rows = sample(which(is_1), 1000)
+    sub_lung = small_matrix[use_rows, ]
+
+    saveRDS(sub_lung, file = here::here("data_files/sub_lung_original_counts.rds"))
+
+This is really, really useful, because if you are having memory problems
+with the full set, then you can use the much smaller subset to test your
+code with, work it all out, and then run the code somewhere else with
+more memory available.
 
 ### Quality Control / Quality Assurance
