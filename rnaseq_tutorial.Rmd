@@ -11,6 +11,11 @@ editor_options:
 
 This RNASeq transcriptomics analysis will be carried out using R, a statistical programming language and interactive environment. I recommend using the RStudio interactive development environment, because it allows us to easily interact with R, and sets up “projects” that control where data is found.
 
+## Included Data
+
+Note that I've included some of the smaller files under the [data_files](data_files) directory so that it is easy to see what happens with some of the code down below.
+The easiest way to get them is either by downloading directly, or cloning the entire project.
+
 ## Finding Data
 
 We want to avoid having to do everything from scratch in this project for various reasons. Therefore, I recommend picking a dataset from either the ARCHS4 or recount2 projects, where all of the data has been preprocessed, and we simply need to download it and start working with it.
@@ -397,7 +402,7 @@ In addition to using the smaller set of samples, we can also select a smaller se
 We will look first for those that have a non-zero value in at least one sample.
 And then we will take a random sample of those.
 
-```{r subsample_small}
+```{r subsample_small, eval = FALSE}
 set.seed(1234)
 is_1 = purrr::map_lgl(seq(1, nrow(small_matrix)), function(in_row){
   sum(small_matrix[in_row, ] > 0) > 0

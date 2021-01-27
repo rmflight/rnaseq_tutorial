@@ -1,3 +1,4 @@
+-   [Included Data](#included-data)
 -   [Finding Data](#finding-data)
 -   [Installing R & RStudio](#installing-r-rstudio)
     -   [Windows](#windows)
@@ -29,6 +30,13 @@ statistical programming language and interactive environment. I
 recommend using the RStudio interactive development environment, because
 it allows us to easily interact with R, and sets up “projects” that
 control where data is found.
+
+## Included Data
+
+Note that I’ve included some of the smaller files under the
+[data\_files](data_files) directory so that it is easy to see what
+happens with some of the code down below. The easiest way to get them is
+either by downloading directly, or cloning the entire project.
 
 ## Finding Data
 
