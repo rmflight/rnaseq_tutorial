@@ -20,6 +20,9 @@
         -   [Useful Samples](#useful-samples)
     -   [Quality Control / Quality
         Assurance](#quality-control-quality-assurance)
+        -   [Correlation](#correlation)
+        -   [Outlier Fraction](#outlier-fraction)
+        -   [Combine](#combine)
 
 This RNASeq transcriptomics analysis will be carried out using R, a
 statistical programming language and interactive environment. I
@@ -537,10 +540,12 @@ really a list underneath, so we can iterate over specific pieces using
 
     ## tumor_stage
 
-    ##  [1] "stage iia"    "stage iib"    "stage ib"    
-    ##  [4] "stage iiia"   "stage iv"     "stage iiib"  
-    ##  [7] "stage ia"     "not reported" "stage i"     
-    ## [10] "stage ii"     "stage iii"
+    ##  [1] "stage iia"    "stage iib"   
+    ##  [3] "stage ib"     "stage iiia"  
+    ##  [5] "stage iv"     "stage iiib"  
+    ##  [7] "stage ia"     "not reported"
+    ##  [9] "stage i"      "stage ii"    
+    ## [11] "stage iii"
 
     ## disease_type
 
@@ -630,7 +635,13 @@ those.
     use_rows = sample(which(is_1), 1000)
     sub_lung = small_matrix[use_rows, ]
 
+    scaled_lung = readRDS(here::here("data_files/recount_lung_scaled_counts.rds"))
+    small_scaled = scaled_lung[, small_lung$sample_id2]
+    sub_scaled = small_scaled[use_rows, ]
     saveRDS(sub_lung, file = here::here("data_files/sub_lung_original_counts.rds"))
+
+    saveRDS(small_scaled, file = here::here("data_files/small_lung_scaled_counts.rds"))
+    saveRDS(sub_scaled, file = here::here("data_files/sub_lung_scaled_counts.rds"))
 
 This is really, really useful, because if you are having memory problems
 with the full set, then you can use the much smaller subset to test your
@@ -638,3 +649,74 @@ code with, work it all out, and then run the code somewhere else with
 more memory available.
 
 ### Quality Control / Quality Assurance
+
+Quality control and quality assurance means we are looking for things
+that don’t fit with the others. We can use correlation amongst the
+samples to check if they match each other and see if something doesn’t
+fit.
+
+    library(visualizationQualityControl)
+    library(ggplot2)
+    sub_lung = readRDS(here::here("data_files/sub_lung_scaled_counts.rds"))
+    sub_info = readRDS(here::here("data_files/small_lung_info.rds"))
+
+#### Correlation
+
+We use a special correlation that is able to incorporate missing values
+when it calculates a pairwise ranked correlation.
+
+    library(furrr)
+    plan(multicore)
+    sample_cor = visqc_ici_kendallt(t(sub_lung))
+
+    saveRDS(sample_cor, file = here::here("data_files/sub_lung_cor.rds"))
+
+    sample_cor = readRDS(here::here("data_files/sub_lung_cor.rds"))
+    med_cor = median_correlations(sample_cor$cor, sub_info$disease)
+
+    ggplot(med_cor, aes(x = med_cor)) + geom_histogram() + 
+      facet_wrap(~ sample_class, ncol = 1)
+
+    ## `stat_bin()` using `bins = 30`. Pick better
+    ## value with `binwidth`.
+
+![](README_files/figure-markdown_strict/load_saved_cor-1.png)
+
+In this plot, we’ve plotted the distributions of the median correlations
+for both of the cancer and the normal samples. Notice that in each of
+these, there is at least one outlier sample. We can also see that the
+“normal” distribution is in general higher than the “cancer”
+distribution.
+
+We could also look at these in a heatmap, and we would probably see that
+each of these would have different correlations to the others.
+
+#### Outlier Fraction
+
+    out_frac = outlier_fraction(t(sub_lung), sub_info$disease)
+
+    ggplot(out_frac, aes(x = frac)) + geom_histogram() + 
+      facet_wrap(~ sample_class, ncol = 1)
+
+    ## `stat_bin()` using `bins = 30`. Pick better
+    ## value with `binwidth`.
+
+![](README_files/figure-markdown_strict/out_frac-1.png)
+
+These are not nearly as clear cut.
+
+#### Combine
+
+We can combine these two scores and look for outliers within the
+combined score, for each of “normal” and “cancer”.
+
+    outliers = determine_outliers(med_cor, out_frac)
+
+    ggplot(outliers, aes(x = score, fill = outlier)) + 
+      geom_histogram(position = "identity") +
+      facet_wrap(~ sample_class.frac, ncol = 1)
+
+    ## `stat_bin()` using `bins = 30`. Pick better
+    ## value with `binwidth`.
+
+![](README_files/figure-markdown_strict/find_outliers-1.png)
