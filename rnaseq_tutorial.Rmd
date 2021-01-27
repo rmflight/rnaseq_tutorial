@@ -124,7 +124,10 @@ library(BiocManager)
 # runs the BiocManager command install
 BiocManager::install("recount") 
 # installs DEseq2 package
-BiocManager::install("DEseq2") 
+BiocManager::install("DEseq2")
+BiocManager::install("circlize")
+install.packages("viridis")
+install.packages("rmarkdown")
 # installs a package used for quality control and analysis
 remotes::install("MoseleyBioinformaticsLab/visualizationQualityControl")
 remotes::install("rmflight/categoryCompare2")
@@ -436,6 +439,7 @@ sub_info = readRDS(here::here("data_files/small_lung_info.rds"))
 #### Correlation
 
 We use a special correlation that is able to incorporate missing values when it calculates a pairwise ranked correlation.
+You can read more about it [here](http://moseleybioinformaticslab.github.io/visualizationQualityControl/articles/ici-kendalltau.html).
 
 ```{r med_cor, eval = FALSE}
 library(furrr)
@@ -457,7 +461,29 @@ In this plot, we've plotted the distributions of the median correlations for bot
 Notice that in each of these, there is at least one outlier sample.
 We can also see that the "normal" distribution is in general higher than the "cancer" distribution.
 
-We could also look at these in a heatmap, and we would probably see that each of these would have different correlations to the others.
+We could also look at these in a heatmap, and we will see that each of these would have different correlations to the others.
+
+```{r heatmap, message=FALSE}
+use_cor = sample_cor$cor
+sub_info$short_id = paste0("S", seq(1, nrow(sub_info)))
+colnames(use_cor) = rownames(use_cor) = sub_info$short_id
+rownames(sub_info) = sub_info$short_id
+cor_order = similarity_reorderbyclass(use_cor, sub_info[, c("disease"), drop = FALSE], transform = "sub_1")
+
+library(circlize)
+colormap = colorRamp2(seq(0.5, 1, length.out = 20), viridis::viridis(20))
+
+data_legend = generate_group_colors(2)
+names(data_legend) = c("cancer", "normal")
+row_data = sub_info[, "disease", drop = FALSE]
+row_annotation = list(disease = data_legend)
+
+visqc_heatmap(use_cor, colormap, "Disease Correlation",
+              name = "ICI-Kt", row_color_data = row_data,
+              row_color_list = row_annotation, col_color_data = row_data,
+              col_color_list = row_annotation, row_order = cor_order$indices,
+              column_order = cor_order$indices)
+```
 
 #### Outlier Fraction
 
