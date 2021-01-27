@@ -465,7 +465,10 @@ We could also look at these in a heatmap, and we will see that each of these wou
 
 ```{r heatmap, message=FALSE}
 use_cor = sample_cor$cor
+# make a short id, because our sample_id's are really, really long
 sub_info$short_id = paste0("S", seq(1, nrow(sub_info)))
+# we have to change them here too, because we don't want them to 
+# overwhelm the heatmap
 colnames(use_cor) = rownames(use_cor) = sub_info$short_id
 rownames(sub_info) = sub_info$short_id
 cor_order = similarity_reorderbyclass(use_cor, sub_info[, c("disease"), drop = FALSE], transform = "sub_1")
@@ -506,4 +509,18 @@ outliers = determine_outliers(med_cor, out_frac)
 ggplot(outliers, aes(x = score, fill = outlier)) + 
   geom_histogram(position = "identity") +
   facet_wrap(~ sample_class.frac, ncol = 1)
+```
+
+#### Add to Info
+
+Now we can combine the outlier information with the previous information we had.
+
+```{r add_outlier_info}
+names(sub_info)
+names(outliers)
+
+sub_info_outliers = dplyr::left_join(sub_info,
+                                     outliers[, c("sample_id", "score", "outlier")], 
+                                     by = c("sample_id2" = "sample_id"))
+saveRDS(sub_info_outliers, file = here::here("data_files/small_lung_info_outliers.rds"))
 ```

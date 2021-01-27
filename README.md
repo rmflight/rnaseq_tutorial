@@ -24,6 +24,7 @@
         -   [Correlation](#correlation)
         -   [Outlier Fraction](#outlier-fraction)
         -   [Combine](#combine)
+        -   [Add to Info](#add-to-info)
 
 This RNASeq transcriptomics analysis will be carried out using R, a
 statistical programming language and interactive environment. I
@@ -705,7 +706,10 @@ We could also look at these in a heatmap, and we will see that each of
 these would have different correlations to the others.
 
     use_cor = sample_cor$cor
+    # make a short id, because our sample_id's are really, really long
     sub_info$short_id = paste0("S", seq(1, nrow(sub_info)))
+    # we have to change them here too, because we don't want them to 
+    # overwhelm the heatmap
     colnames(use_cor) = rownames(use_cor) = sub_info$short_id
     rownames(sub_info) = sub_info$short_id
     cor_order = similarity_reorderbyclass(use_cor, sub_info[, c("disease"), drop = FALSE], transform = "sub_1")
@@ -755,3 +759,29 @@ combined score, for each of “normal” and “cancer”.
     ## value with `binwidth`.
 
 ![](README_files/figure-markdown_strict/find_outliers-1.png)
+
+#### Add to Info
+
+Now we can combine the outlier information with the previous information
+we had.
+
+    names(sub_info)
+
+    ##  [1] "project"      "sample_id"   
+    ##  [3] "gender"       "project_name"
+    ##  [5] "race"         "sample_type" 
+    ##  [7] "primary_site" "tumor_stage" 
+    ##  [9] "disease_type" "disease"     
+    ## [11] "sample_id2"   "short_id"
+
+    names(outliers)
+
+    ## [1] "sample_id"         "med_cor"          
+    ## [3] "sample_class.cor"  "sample_class.frac"
+    ## [5] "frac"              "score"            
+    ## [7] "outlier"
+
+    sub_info_outliers = dplyr::left_join(sub_info,
+                                         outliers[, c("sample_id", "score", "outlier")], 
+                                         by = c("sample_id2" = "sample_id"))
+    saveRDS(sub_info_outliers, file = here::here("data_files/small_lung_info_outliers.rds"))
