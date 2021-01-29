@@ -25,6 +25,8 @@
         -   [Outlier Fraction](#outlier-fraction)
         -   [Combine](#combine)
         -   [Add to Info](#add-to-info)
+        -   [Principal Components
+            Analysis](#principal-components-analysis)
     -   [Differential Analysis](#differential-analysis)
 
 This RNASeq transcriptomics analysis will be carried out using R, a
@@ -671,6 +673,10 @@ fit.
 
     library(visualizationQualityControl)
     library(ggplot2)
+
+    ## Learn more about the underlying theory at
+    ## https://ggplot2-book.org/
+
     sub_lung = readRDS(here::here("data_files/sub_lung_scaled_counts.rds"))
     sub_info = readRDS(here::here("data_files/small_lung_info.rds"))
 
@@ -786,6 +792,39 @@ we had.
                                          by = c("sample_id2" = "sample_id"))
     saveRDS(sub_info_outliers, file = here::here("data_files/small_lung_info_outliers.rds"))
 
+#### Principal Components Analysis
+
+And we can check what principal components analysis (PCA) shows us after
+removing the outliers. What we are looking for is that either PC1 or PC2
+separate the two types of samples.
+
+**We use the scaled counts because recount has taken care of the
+“normalization” aspect for us**. We also log-transform because PCA
+doesn’t like the error structure in the raw data. `log1p` is used
+because we have zero values, so we want to actually transform using
+`log(value + 1)` to make it work, and this is a built-in function that
+makes sure 1 is added in a sane way for large and small values.
+
+    scaled_counts = readRDS(here::here("data_files/small_lung_scaled_counts.rds"))
+    kept_info = dplyr::filter(sub_info_outliers, !outlier)
+    kept_counts = log1p(scaled_counts[, kept_info$sample_id2])
+
+    kept_pca = prcomp(t(kept_counts), center = TRUE, scale. = FALSE)
+
+    kept_pca2 = cbind(as.data.frame(kept_pca$x), kept_info)
+
+    ggplot(kept_pca2, aes(x = PC1, y = PC2, color = disease)) + 
+      geom_point() +
+      theme(legend.position = c(0.9, 0.1))
+
+![](README_files/figure-markdown_strict/pca_check-1.png)
+
+Yes! Everything looks A-OK! It might look like this with the outliers
+left in too, but why keep things that don’t seem to look quite like the
+others? Those will only introduce variance that we don’t want in our
+statistical calculations.
+
 ### Differential Analysis
 
-Now we need to determine the
+Now we need to run statistics on the genes and see what is
+differentially expressed between these two groups of samples.
