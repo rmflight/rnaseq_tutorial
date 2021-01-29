@@ -178,13 +178,13 @@ We can then use `BiocManager` to install biologically related packages.
     # runs the BiocManager command install
     BiocManager::install("recount") 
     # installs DEseq2 package
-    BiocManager::install("DEseq2")
+    BiocManager::install("DESeq2")
     BiocManager::install("circlize")
     install.packages("viridis")
     install.packages("rmarkdown")
     # installs a package used for quality control and analysis
-    remotes::install("MoseleyBioinformaticsLab/visualizationQualityControl")
-    remotes::install("rmflight/categoryCompare2")
+    remotes::install_github("MoseleyBioinformaticsLab/visualizationQualityControl")
+    remotes::install_github("rmflight/categoryCompare2")
 
 While these are installing, you should notice lots of other packages
 being installed as well. Hopefully none of them are generating errors
@@ -397,18 +397,6 @@ Let’s see if we can subset the recount samples to something more
 reasonable than **all** of the samples.
 
     library(dplyr)
-
-    ## 
-    ## Attaching package: 'dplyr'
-
-    ## The following objects are masked from 'package:stats':
-    ## 
-    ##     filter, lag
-
-    ## The following objects are masked from 'package:base':
-    ## 
-    ##     intersect, setdiff, setequal, union
-
     lung_info = readRDS(here::here("data_files/recount_lung_sample_info.rds"))
 
     knitr::kable(head(lung_info))
@@ -595,8 +583,9 @@ This gives us 279 samples. Lets verify that we only have what we want:
 
     ## tumor_stage
 
-    ## [1] "stage iia"  "stage iib"  "stage iv"   "stage iiib"
-    ## [5] "stage iiia" "stage ii"   "stage iii"
+    ## [1] "stage iia"  "stage iib"  "stage iv"  
+    ## [4] "stage iiib" "stage iiia" "stage ii"  
+    ## [7] "stage iii"
 
     ## sample_type
 
@@ -673,10 +662,6 @@ fit.
 
     library(visualizationQualityControl)
     library(ggplot2)
-
-    ## Learn more about the underlying theory at
-    ## https://ggplot2-book.org/
-
     sub_lung = readRDS(here::here("data_files/sub_lung_scaled_counts.rds"))
     sub_info = readRDS(here::here("data_files/small_lung_info.rds"))
 
@@ -699,8 +684,8 @@ about it
     ggplot(med_cor, aes(x = med_cor)) + geom_histogram() + 
       facet_wrap(~ sample_class, ncol = 1)
 
-    ## `stat_bin()` using `bins = 30`. Pick better value
-    ## with `binwidth`.
+    ## `stat_bin()` using `bins = 30`. Pick better
+    ## value with `binwidth`.
 
 ![](README_files/figure-markdown_strict/load_saved_cor-1.png)
 
@@ -745,8 +730,8 @@ these would have different correlations to the others.
     ggplot(out_frac, aes(x = frac)) + geom_histogram() + 
       facet_wrap(~ sample_class, ncol = 1)
 
-    ## `stat_bin()` using `bins = 30`. Pick better value
-    ## with `binwidth`.
+    ## `stat_bin()` using `bins = 30`. Pick better
+    ## value with `binwidth`.
 
 ![](README_files/figure-markdown_strict/out_frac-1.png)
 
@@ -763,8 +748,8 @@ combined score, for each of “normal” and “cancer”.
       geom_histogram(position = "identity") +
       facet_wrap(~ sample_class.frac, ncol = 1)
 
-    ## `stat_bin()` using `bins = 30`. Pick better value
-    ## with `binwidth`.
+    ## `stat_bin()` using `bins = 30`. Pick better
+    ## value with `binwidth`.
 
 ![](README_files/figure-markdown_strict/find_outliers-1.png)
 

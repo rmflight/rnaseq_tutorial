@@ -124,13 +124,13 @@ library(BiocManager)
 # runs the BiocManager command install
 BiocManager::install("recount") 
 # installs DEseq2 package
-BiocManager::install("DEseq2")
+BiocManager::install("DESeq2")
 BiocManager::install("circlize")
 install.packages("viridis")
 install.packages("rmarkdown")
 # installs a package used for quality control and analysis
-remotes::install("MoseleyBioinformaticsLab/visualizationQualityControl")
-remotes::install("rmflight/categoryCompare2")
+remotes::install_github("MoseleyBioinformaticsLab/visualizationQualityControl")
+remotes::install_github("rmflight/categoryCompare2")
 ```
 
 While these are installing, you should notice lots of other packages being installed as well. 
