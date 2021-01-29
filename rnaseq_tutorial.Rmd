@@ -206,7 +206,11 @@ We want to extract both the original gene level counts, scaled counts, and infor
 ```{r extract_data, eval=FALSE}
 library(recount)
 load(here::here("data_files/rse_gene_lung.Rdata"))
-gene_counts = assays(rse_gene)$counts
+
+# we need to scale the counts closer to what we would normally expect
+# before we extract them.
+rse_raw = read_counts(rse_gene, round = TRUE)
+raw_counts = assays(rse_raw)$counts
 sample_data = colData(rse_gene)
 
 # some of these are going to be specific to the TCGA data, I think
@@ -223,10 +227,10 @@ sample_info = data.frame(project = sample_data$project,
 gene_data = rowRanges(rse_gene)
 gene_info = as.data.frame(mcols(gene_data))
 
-scaled_data = scale_counts(rse_gene)
-scaled_counts = assays(scaled_data)$counts
+rse_scaled = scale_counts(rse_gene)
+scaled_counts = assays(rse_scaled)$counts
 
-saveRDS(gene_counts, file = here::here("data_files/recount_lung_original_counts.rds"))
+saveRDS(raw_counts, file = here::here("data_files/recount_lung_raw_counts.rds"))
 saveRDS(sample_info, file = here::here("data_files/recount_lung_sample_info.rds"))
 saveRDS(scaled_counts, file = here::here("data_files/recount_lung_scaled_counts.rds"))
 saveRDS(gene_info, file = here::here("data_files/recount_lung_gene_info.rds"))
@@ -393,12 +397,12 @@ But now we can make a smaller version of the lung data with just these samples.
 ```{r make_small_data}
 # we have to transform this to upper because that is what is on the matrix
 small_lung = dplyr::mutate(small_lung, sample_id2 = toupper(sample_id))
-lung_matrix = readRDS(here::here("data_files/recount_lung_original_counts.rds"))
+lung_matrix = readRDS(here::here("data_files/recount_lung_raw_counts.rds"))
 
 small_matrix = lung_matrix[, small_lung$sample_id2]
 dim(small_matrix)
 saveRDS(small_lung, file = here::here("data_files/small_lung_info.rds"))
-saveRDS(small_matrix, file = here::here("data_files/small_lung_original_counts.rds"))
+saveRDS(small_matrix, file = here::here("data_files/small_lung_raw_counts.rds"))
 ```
 
 In addition to using the smaller set of samples, we can also select a smaller set of genes.
@@ -416,7 +420,7 @@ sub_lung = small_matrix[use_rows, ]
 scaled_lung = readRDS(here::here("data_files/recount_lung_scaled_counts.rds"))
 small_scaled = scaled_lung[, small_lung$sample_id2]
 sub_scaled = small_scaled[use_rows, ]
-saveRDS(sub_lung, file = here::here("data_files/sub_lung_original_counts.rds"))
+saveRDS(sub_lung, file = here::here("data_files/sub_lung_raw_counts.rds"))
 
 saveRDS(small_scaled, file = here::here("data_files/small_lung_scaled_counts.rds"))
 saveRDS(sub_scaled, file = here::here("data_files/sub_lung_scaled_counts.rds"))
@@ -524,3 +528,7 @@ sub_info_outliers = dplyr::left_join(sub_info,
                                      by = c("sample_id2" = "sample_id"))
 saveRDS(sub_info_outliers, file = here::here("data_files/small_lung_info_outliers.rds"))
 ```
+
+### Differential Analysis
+
+Now we need to determine the 

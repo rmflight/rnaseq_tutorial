@@ -25,6 +25,7 @@
         -   [Outlier Fraction](#outlier-fraction)
         -   [Combine](#combine)
         -   [Add to Info](#add-to-info)
+    -   [Differential Analysis](#differential-analysis)
 
 This RNASeq transcriptomics analysis will be carried out using R, a
 statistical programming language and interactive environment. I
@@ -271,7 +272,11 @@ some other things easier.
 
     library(recount)
     load(here::here("data_files/rse_gene_lung.Rdata"))
-    gene_counts = assays(rse_gene)$counts
+
+    # we need to scale the counts closer to what we would normally expect
+    # before we extract them.
+    rse_raw = read_counts(rse_gene, round = TRUE)
+    raw_counts = assays(rse_raw)$counts
     sample_data = colData(rse_gene)
 
     # some of these are going to be specific to the TCGA data, I think
@@ -288,10 +293,10 @@ some other things easier.
     gene_data = rowRanges(rse_gene)
     gene_info = as.data.frame(mcols(gene_data))
 
-    scaled_data = scale_counts(rse_gene)
-    scaled_counts = assays(scaled_data)$counts
+    rse_scaled = scale_counts(rse_gene)
+    scaled_counts = assays(rse_scaled)$counts
 
-    saveRDS(gene_counts, file = here::here("data_files/recount_lung_original_counts.rds"))
+    saveRDS(raw_counts, file = here::here("data_files/recount_lung_raw_counts.rds"))
     saveRDS(sample_info, file = here::here("data_files/recount_lung_sample_info.rds"))
     saveRDS(scaled_counts, file = here::here("data_files/recount_lung_scaled_counts.rds"))
     saveRDS(gene_info, file = here::here("data_files/recount_lung_gene_info.rds"))
@@ -552,12 +557,10 @@ really a list underneath, so we can iterate over specific pieces using
 
     ## tumor_stage
 
-    ##  [1] "stage iia"    "stage iib"   
-    ##  [3] "stage ib"     "stage iiia"  
-    ##  [5] "stage iv"     "stage iiib"  
-    ##  [7] "stage ia"     "not reported"
-    ##  [9] "stage i"      "stage ii"    
-    ## [11] "stage iii"
+    ##  [1] "stage iia"    "stage iib"    "stage ib"    
+    ##  [4] "stage iiia"   "stage iv"     "stage iiib"  
+    ##  [7] "stage ia"     "not reported" "stage i"     
+    ## [10] "stage ii"     "stage iii"
 
     ## disease_type
 
@@ -590,9 +593,8 @@ This gives us 279 samples. Lets verify that we only have what we want:
 
     ## tumor_stage
 
-    ## [1] "stage iia"  "stage iib"  "stage iv"  
-    ## [4] "stage iiib" "stage iiia" "stage ii"  
-    ## [7] "stage iii"
+    ## [1] "stage iia"  "stage iib"  "stage iv"   "stage iiib"
+    ## [5] "stage iiia" "stage ii"   "stage iii"
 
     ## sample_type
 
@@ -625,7 +627,7 @@ samples.
 
     # we have to transform this to upper because that is what is on the matrix
     small_lung = dplyr::mutate(small_lung, sample_id2 = toupper(sample_id))
-    lung_matrix = readRDS(here::here("data_files/recount_lung_original_counts.rds"))
+    lung_matrix = readRDS(here::here("data_files/recount_lung_raw_counts.rds"))
 
     small_matrix = lung_matrix[, small_lung$sample_id2]
     dim(small_matrix)
@@ -633,7 +635,7 @@ samples.
     ## [1] 58037   279
 
     saveRDS(small_lung, file = here::here("data_files/small_lung_info.rds"))
-    saveRDS(small_matrix, file = here::here("data_files/small_lung_original_counts.rds"))
+    saveRDS(small_matrix, file = here::here("data_files/small_lung_raw_counts.rds"))
 
 In addition to using the smaller set of samples, we can also select a
 smaller set of genes. We will look first for those that have a non-zero
@@ -650,7 +652,7 @@ those.
     scaled_lung = readRDS(here::here("data_files/recount_lung_scaled_counts.rds"))
     small_scaled = scaled_lung[, small_lung$sample_id2]
     sub_scaled = small_scaled[use_rows, ]
-    saveRDS(sub_lung, file = here::here("data_files/sub_lung_original_counts.rds"))
+    saveRDS(sub_lung, file = here::here("data_files/sub_lung_raw_counts.rds"))
 
     saveRDS(small_scaled, file = here::here("data_files/small_lung_scaled_counts.rds"))
     saveRDS(sub_scaled, file = here::here("data_files/sub_lung_scaled_counts.rds"))
@@ -691,8 +693,8 @@ about it
     ggplot(med_cor, aes(x = med_cor)) + geom_histogram() + 
       facet_wrap(~ sample_class, ncol = 1)
 
-    ## `stat_bin()` using `bins = 30`. Pick better
-    ## value with `binwidth`.
+    ## `stat_bin()` using `bins = 30`. Pick better value
+    ## with `binwidth`.
 
 ![](README_files/figure-markdown_strict/load_saved_cor-1.png)
 
@@ -737,8 +739,8 @@ these would have different correlations to the others.
     ggplot(out_frac, aes(x = frac)) + geom_histogram() + 
       facet_wrap(~ sample_class, ncol = 1)
 
-    ## `stat_bin()` using `bins = 30`. Pick better
-    ## value with `binwidth`.
+    ## `stat_bin()` using `bins = 30`. Pick better value
+    ## with `binwidth`.
 
 ![](README_files/figure-markdown_strict/out_frac-1.png)
 
@@ -755,8 +757,8 @@ combined score, for each of “normal” and “cancer”.
       geom_histogram(position = "identity") +
       facet_wrap(~ sample_class.frac, ncol = 1)
 
-    ## `stat_bin()` using `bins = 30`. Pick better
-    ## value with `binwidth`.
+    ## `stat_bin()` using `bins = 30`. Pick better value
+    ## with `binwidth`.
 
 ![](README_files/figure-markdown_strict/find_outliers-1.png)
 
@@ -767,12 +769,10 @@ we had.
 
     names(sub_info)
 
-    ##  [1] "project"      "sample_id"   
-    ##  [3] "gender"       "project_name"
-    ##  [5] "race"         "sample_type" 
-    ##  [7] "primary_site" "tumor_stage" 
-    ##  [9] "disease_type" "disease"     
-    ## [11] "sample_id2"   "short_id"
+    ##  [1] "project"      "sample_id"    "gender"      
+    ##  [4] "project_name" "race"         "sample_type" 
+    ##  [7] "primary_site" "tumor_stage"  "disease_type"
+    ## [10] "disease"      "sample_id2"   "short_id"
 
     names(outliers)
 
@@ -785,3 +785,7 @@ we had.
                                          outliers[, c("sample_id", "score", "outlier")], 
                                          by = c("sample_id2" = "sample_id"))
     saveRDS(sub_info_outliers, file = here::here("data_files/small_lung_info_outliers.rds"))
+
+### Differential Analysis
+
+Now we need to determine the
