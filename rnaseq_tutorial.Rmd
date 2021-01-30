@@ -444,6 +444,8 @@ sub_info = readRDS(here::here("data_files/small_lung_info.rds"))
 
 We use a special correlation that is able to incorporate missing values when it calculates a pairwise ranked correlation.
 You can read more about it [here](http://moseleybioinformaticslab.github.io/visualizationQualityControl/articles/ici-kendalltau.html).
+Notice here we used the **sub** matrix of 1000 genes so it will actually calculate.
+The correlations for this group are also available in the GitHub repo.
 
 ```{r med_cor, eval = FALSE}
 library(furrr)
@@ -494,6 +496,8 @@ visqc_heatmap(use_cor, colormap, "Disease Correlation",
 
 #### Outlier Fraction
 
+For this one we also used the **sub** set matrix.
+
 ```{r out_frac}
 out_frac = outlier_fraction(t(sub_lung), sub_info$disease)
 
@@ -534,7 +538,8 @@ saveRDS(sub_info_outliers, file = here::here("data_files/small_lung_info_outlier
 And we can check what principal components analysis (PCA) shows us after removing the outliers.
 What we are looking for is that either PC1 or PC2 separate the two types of samples.
 
-**We use the scaled counts because recount has taken care of the "normalization" aspect for us**.
+**We use the scaled counts because recount has taken care of the "normalization" aspect for us.
+We also use the full data set with all of the genes.**
 We also log-transform because PCA doesn't like the error structure in the raw data.
 `log1p` is used because we have zero values, so we want to actually transform using `log(value + 1)` to make it work, and this is a built-in function that makes sure 1 is added in a sane way for large and small values.
 
@@ -559,3 +564,39 @@ Those will only introduce variance that we don't want in our statistical calcula
 ### Differential Analysis
 
 Now we need to run statistics on the genes and see what is differentially expressed between these two groups of samples.
+
+We will use the `sample_info` to select the samples, and we will use the `raw` counts we extracted previously.
+
+```{r deseq2_load_filter}
+library(DESeq2)
+
+sample_info = readRDS(here::here("data_files/small_lung_info_outliers.rds"))
+count_data = readRDS(here::here("data_files/small_lung_raw_counts.rds"))
+
+sample_info = dplyr::filter(sample_info, !outlier)
+count_data = count_data[, sample_info$sample_id2]
+```
+
+And now we create the object that DESeq2 needs for the analysis.
+
+```{r deseq_create, eval = FALSE}
+# we need to convert the disease to a factor for the design of the comparisons
+sample_info$disease = factor(sample_info$disease, levels = c("normal", "cancer"))
+dds = DESeqDataSetFromMatrix(countData = count_data,
+                             colData = sample_info,
+                             design = ~disease)
+# this takes a few minutes to run, so I didn't run it
+# directly in the tutorial
+dds = DESeq(dds)
+res = results(dds)
+saveRDS(res, file = here::here("data_files/small_lung_deseq_results.rds"))
+```
+
+```{r deseq_res}
+res = readRDS(here::here("data_files/small_lung_deseq_results.rds"))
+res
+
+# we convert to a data.frame, 
+# and then filter down to most significant and biggest changes
+sig_res = as.data.frame(res) %>% dplyr::filter(padj <= 0.001, abs(log2FoldChange) >= 2)
+```

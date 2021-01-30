@@ -397,6 +397,18 @@ Let’s see if we can subset the recount samples to something more
 reasonable than **all** of the samples.
 
     library(dplyr)
+
+    ## 
+    ## Attaching package: 'dplyr'
+
+    ## The following objects are masked from 'package:stats':
+    ## 
+    ##     filter, lag
+
+    ## The following objects are masked from 'package:base':
+    ## 
+    ##     intersect, setdiff, setequal, union
+
     lung_info = readRDS(here::here("data_files/recount_lung_sample_info.rds"))
 
     knitr::kable(head(lung_info))
@@ -525,21 +537,17 @@ really a list underneath, so we can iterate over specific pieces using
 
     ## project_name
 
-    ## [1] "Lung Squamous Cell Carcinoma"
-    ## [2] "Lung Adenocarcinoma"
+    ## [1] "Lung Squamous Cell Carcinoma" "Lung Adenocarcinoma"
 
     ## race
 
-    ## [1] "not reported"                    
-    ## [2] "white"                           
-    ## [3] "black or african american"       
-    ## [4] "asian"                           
+    ## [1] "not reported"                     "white"                           
+    ## [3] "black or african american"        "asian"                           
     ## [5] "american indian or alaska native"
 
     ## sample_type
 
-    ## [1] "Primary Tumor"       "Solid Tissue Normal"
-    ## [3] "Recurrent Tumor"
+    ## [1] "Primary Tumor"       "Solid Tissue Normal" "Recurrent Tumor"
 
     ## primary_site
 
@@ -547,15 +555,13 @@ really a list underneath, so we can iterate over specific pieces using
 
     ## tumor_stage
 
-    ##  [1] "stage iia"    "stage iib"    "stage ib"    
-    ##  [4] "stage iiia"   "stage iv"     "stage iiib"  
-    ##  [7] "stage ia"     "not reported" "stage i"     
-    ## [10] "stage ii"     "stage iii"
+    ##  [1] "stage iia"    "stage iib"    "stage ib"     "stage iiia"   "stage iv"    
+    ##  [6] "stage iiib"   "stage ia"     "not reported" "stage i"      "stage ii"    
+    ## [11] "stage iii"
 
     ## disease_type
 
-    ## [1] "Lung Squamous Cell Carcinoma"
-    ## [2] "Lung Adenocarcinoma"
+    ## [1] "Lung Squamous Cell Carcinoma" "Lung Adenocarcinoma"
 
 Using this information, we can start to think about how to slice and
 dice the data. For example, we probably want to use only one type of
@@ -583,8 +589,7 @@ This gives us 279 samples. Lets verify that we only have what we want:
 
     ## tumor_stage
 
-    ## [1] "stage iia"  "stage iib"  "stage iv"  
-    ## [4] "stage iiib" "stage iiia" "stage ii"  
+    ## [1] "stage iia"  "stage iib"  "stage iv"   "stage iiib" "stage iiia" "stage ii"  
     ## [7] "stage iii"
 
     ## sample_type
@@ -671,6 +676,9 @@ We use a special correlation that is able to incorporate missing values
 when it calculates a pairwise ranked correlation. You can read more
 about it
 [here](http://moseleybioinformaticslab.github.io/visualizationQualityControl/articles/ici-kendalltau.html).
+Notice here we used the **sub** matrix of 1000 genes so it will actually
+calculate. The correlations for this group are also available in the
+GitHub repo.
 
     library(furrr)
     plan(multicore)
@@ -684,8 +692,7 @@ about it
     ggplot(med_cor, aes(x = med_cor)) + geom_histogram() + 
       facet_wrap(~ sample_class, ncol = 1)
 
-    ## `stat_bin()` using `bins = 30`. Pick better
-    ## value with `binwidth`.
+    ## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
 
 ![](README_files/figure-markdown_strict/load_saved_cor-1.png)
 
@@ -725,13 +732,14 @@ these would have different correlations to the others.
 
 #### Outlier Fraction
 
+For this one we also used the **sub** set matrix.
+
     out_frac = outlier_fraction(t(sub_lung), sub_info$disease)
 
     ggplot(out_frac, aes(x = frac)) + geom_histogram() + 
       facet_wrap(~ sample_class, ncol = 1)
 
-    ## `stat_bin()` using `bins = 30`. Pick better
-    ## value with `binwidth`.
+    ## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
 
 ![](README_files/figure-markdown_strict/out_frac-1.png)
 
@@ -748,8 +756,7 @@ combined score, for each of “normal” and “cancer”.
       geom_histogram(position = "identity") +
       facet_wrap(~ sample_class.frac, ncol = 1)
 
-    ## `stat_bin()` using `bins = 30`. Pick better
-    ## value with `binwidth`.
+    ## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
 
 ![](README_files/figure-markdown_strict/find_outliers-1.png)
 
@@ -760,17 +767,14 @@ we had.
 
     names(sub_info)
 
-    ##  [1] "project"      "sample_id"    "gender"      
-    ##  [4] "project_name" "race"         "sample_type" 
-    ##  [7] "primary_site" "tumor_stage"  "disease_type"
-    ## [10] "disease"      "sample_id2"   "short_id"
+    ##  [1] "project"      "sample_id"    "gender"       "project_name" "race"        
+    ##  [6] "sample_type"  "primary_site" "tumor_stage"  "disease_type" "disease"     
+    ## [11] "sample_id2"   "short_id"
 
     names(outliers)
 
-    ## [1] "sample_id"         "med_cor"          
-    ## [3] "sample_class.cor"  "sample_class.frac"
-    ## [5] "frac"              "score"            
-    ## [7] "outlier"
+    ## [1] "sample_id"         "med_cor"           "sample_class.cor"  "sample_class.frac"
+    ## [5] "frac"              "score"             "outlier"
 
     sub_info_outliers = dplyr::left_join(sub_info,
                                          outliers[, c("sample_id", "score", "outlier")], 
@@ -784,11 +788,12 @@ removing the outliers. What we are looking for is that either PC1 or PC2
 separate the two types of samples.
 
 **We use the scaled counts because recount has taken care of the
-“normalization” aspect for us**. We also log-transform because PCA
-doesn’t like the error structure in the raw data. `log1p` is used
-because we have zero values, so we want to actually transform using
-`log(value + 1)` to make it work, and this is a built-in function that
-makes sure 1 is added in a sane way for large and small values.
+“normalization” aspect for us. We also use the full data set with all of
+the genes.** We also log-transform because PCA doesn’t like the error
+structure in the raw data. `log1p` is used because we have zero values,
+so we want to actually transform using `log(value + 1)` to make it work,
+and this is a built-in function that makes sure 1 is added in a sane way
+for large and small values.
 
     scaled_counts = readRDS(here::here("data_files/small_lung_scaled_counts.rds"))
     kept_info = dplyr::filter(sub_info_outliers, !outlier)
@@ -813,3 +818,158 @@ statistical calculations.
 
 Now we need to run statistics on the genes and see what is
 differentially expressed between these two groups of samples.
+
+We will use the `sample_info` to select the samples, and we will use the
+`raw` counts we extracted previously.
+
+    library(DESeq2)
+
+    ## Loading required package: S4Vectors
+
+    ## Loading required package: stats4
+
+    ## Loading required package: BiocGenerics
+
+    ## Loading required package: parallel
+
+    ## 
+    ## Attaching package: 'BiocGenerics'
+
+    ## The following objects are masked from 'package:parallel':
+    ## 
+    ##     clusterApply, clusterApplyLB, clusterCall, clusterEvalQ, clusterExport,
+    ##     clusterMap, parApply, parCapply, parLapply, parLapplyLB, parRapply,
+    ##     parSapply, parSapplyLB
+
+    ## The following objects are masked from 'package:dplyr':
+    ## 
+    ##     combine, intersect, setdiff, union
+
+    ## The following objects are masked from 'package:stats':
+    ## 
+    ##     IQR, mad, sd, var, xtabs
+
+    ## The following objects are masked from 'package:base':
+    ## 
+    ##     anyDuplicated, append, as.data.frame, basename, cbind, colnames, dirname,
+    ##     do.call, duplicated, eval, evalq, Filter, Find, get, grep, grepl,
+    ##     intersect, is.unsorted, lapply, Map, mapply, match, mget, order, paste,
+    ##     pmax, pmax.int, pmin, pmin.int, Position, rank, rbind, Reduce, rownames,
+    ##     sapply, setdiff, sort, table, tapply, union, unique, unsplit, which,
+    ##     which.max, which.min
+
+    ## 
+    ## Attaching package: 'S4Vectors'
+
+    ## The following objects are masked from 'package:dplyr':
+    ## 
+    ##     first, rename
+
+    ## The following object is masked from 'package:base':
+    ## 
+    ##     expand.grid
+
+    ## Loading required package: IRanges
+
+    ## 
+    ## Attaching package: 'IRanges'
+
+    ## The following objects are masked from 'package:dplyr':
+    ## 
+    ##     collapse, desc, slice
+
+    ## Loading required package: GenomicRanges
+
+    ## Loading required package: GenomeInfoDb
+
+    ## Loading required package: SummarizedExperiment
+
+    ## Loading required package: Biobase
+
+    ## Welcome to Bioconductor
+    ## 
+    ##     Vignettes contain introductory material; view with 'browseVignettes()'. To
+    ##     cite Bioconductor, see 'citation("Biobase")', and for packages
+    ##     'citation("pkgname")'.
+
+    ## Loading required package: DelayedArray
+
+    ## Loading required package: matrixStats
+
+    ## 
+    ## Attaching package: 'matrixStats'
+
+    ## The following objects are masked from 'package:Biobase':
+    ## 
+    ##     anyMissing, rowMedians
+
+    ## The following object is masked from 'package:dplyr':
+    ## 
+    ##     count
+
+    ## 
+    ## Attaching package: 'DelayedArray'
+
+    ## The following objects are masked from 'package:matrixStats':
+    ## 
+    ##     colMaxs, colMins, colRanges, rowMaxs, rowMins, rowRanges
+
+    ## The following objects are masked from 'package:base':
+    ## 
+    ##     aperm, apply, rowsum
+
+    sample_info = readRDS(here::here("data_files/small_lung_info_outliers.rds"))
+    count_data = readRDS(here::here("data_files/small_lung_raw_counts.rds"))
+
+    sample_info = dplyr::filter(sample_info, !outlier)
+    count_data = count_data[, sample_info$sample_id2]
+
+And now we create the object that DESeq2 needs for the analysis.
+
+    # we need to convert the disease to a factor for the design of the comparisons
+    sample_info$disease = factor(sample_info$disease, levels = c("normal", "cancer"))
+    dds = DESeqDataSetFromMatrix(countData = count_data,
+                                 colData = sample_info,
+                                 design = ~disease)
+    # this takes a few minutes to run, so I didn't run it
+    # directly in the tutorial
+    dds = DESeq(dds)
+    res = results(dds)
+    saveRDS(res, file = here::here("data_files/small_lung_deseq_results.rds"))
+
+    res = readRDS(here::here("data_files/small_lung_deseq_results.rds"))
+    res
+
+    ## log2 fold change (MLE): disease cancer vs normal 
+    ## Wald test p-value: disease cancer vs normal 
+    ## DataFrame with 58037 rows and 6 columns
+    ##                      baseMean log2FoldChange     lfcSE       stat      pvalue
+    ##                     <numeric>      <numeric> <numeric>  <numeric>   <numeric>
+    ## ENSG00000000003.14 3314.28806       1.037849 0.1468198    7.06886 1.56211e-12
+    ## ENSG00000000005.5     1.19293      -1.255431 0.6480657   -1.93720 5.27213e-02
+    ## ENSG00000000419.12 2408.50218       0.741855 0.1166827    6.35788 2.04556e-10
+    ## ENSG00000000457.13 1240.32814       0.394256 0.0988883    3.98688 6.69468e-05
+    ## ENSG00000000460.16 1201.06850       1.554393 0.1198491   12.96958 1.82016e-38
+    ## ...                       ...            ...       ...        ...         ...
+    ## ENSG00000283695.1   0.0342914      0.2628614  3.059119  0.0859272  0.93152432
+    ## ENSG00000283696.1  31.9822873     -0.5211121  0.190878 -2.7300791  0.00633191
+    ## ENSG00000283697.1  58.0977372      0.0509825  0.144599  0.3525784  0.72440450
+    ## ENSG00000283698.1   0.3498825      0.3165290  0.508796  0.6221137  0.53386711
+    ## ENSG00000283699.1   0.0506252     -0.0783224  2.226870 -0.0351715  0.97194298
+    ##                           padj
+    ##                      <numeric>
+    ## ENSG00000000003.14 1.04694e-11
+    ## ENSG00000000005.5  8.31141e-02
+    ## ENSG00000000419.12 1.10383e-09
+    ## ENSG00000000457.13 1.81601e-04
+    ## ENSG00000000460.16 8.15301e-37
+    ## ...                        ...
+    ## ENSG00000283695.1           NA
+    ## ENSG00000283696.1    0.0122532
+    ## ENSG00000283697.1    0.7788116
+    ## ENSG00000283698.1    0.6107716
+    ## ENSG00000283699.1           NA
+
+    # we convert to a data.frame, 
+    # and then filter down to most significant and biggest changes
+    sig_res = as.data.frame(res) %>% dplyr::filter(padj <= 0.001, abs(log2FoldChange) >= 2)
