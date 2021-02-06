@@ -620,7 +620,70 @@ We are using it because it has facilities for some really neat things.
 However, if you don't like it, you can easily use something else.
 
 If you want some more background on the subject, I definitely recommend checking out one of the first papers on this topic by [Gavin Sherlock](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3037731/).
+I also recommend reading up on what the [Gene Ontology is](http://geneontology.org/docs/go-annotations/).
 
-#### Data Needed
 
 So the data we need for this are the significant gene lists, as well as the total genes measured in this experiment, and their annotations.
+
+##### Gene Lists
+
+We are going to use the gene info object from way, way back at the beginning of this tutorial to get the actual gene names.
+
+```{r gene_lists}
+gene_info = readRDS(here::here("data_files/recount_lung_gene_info.rds"))
+all_genes = unique(unlist(gene_info$symbol))
+
+sig_res = readRDS(here::here("data_files/adeno_deseq_sig.rds")) %>%
+  dplyr::mutate(gene_id = rownames(.)) %>%
+  dplyr::left_join(., gene_info, by = "gene_id")
+
+sig_up = dplyr::filter(sig_res, log2FoldChange > 0) %>%
+  dplyr::pull(symbol) %>% unlist(.) %>% unique()
+sig_down = dplyr::filter(sig_res, log2FoldChange < 0) %>%
+  dplyr::pull(symbol) %>% unlist(.) %>% unique()
+```
+
+##### Annotationss
+
+And now we will get the Gene Ontology annotations for those genes directly from Bioconductor.
+
+```{r annotations}
+library(org.Hs.eg.db)
+library(GO.db)
+library(categoryCompare2)
+go_all_gene = select(org.Hs.eg.db, keys = all_genes, keytype = "SYMBOL", columns = c("GOALL", "ONTOLOGYALL"))
+go_2_gene = split(go_all_gene$SYMBOL, go_all_gene$GOALL)
+go_desc = select(GO.db, keys = names(go_2_gene), columns = "TERM", keytype = "GOID")$TERM
+names(go_desc) = names(go_2_gene)
+```
+
+Now we create the `categoryCompare2` annotation object.
+
+```{r cc_annotation}
+go_annotation = annotation(annotation_features = go_2_gene,
+                           description = go_desc,
+                           annotation_type = "GO")
+go_annotation
+```
+
+##### Enrichments
+
+```{r do_enrichment}
+up_enrich = hypergeometric_feature_enrichment(
+  new("hypergeom_features", significant = sig_up,
+      universe = all_genes, annotation = go_annotation),
+  p_adjust = "BH"
+)
+down_enrich = hypergeometric_feature_enrichment(
+  new("hypergeom_features", significant = sig_down,
+      universe = all_genes, annotation = go_annotation),
+  p_adjust = "BH"
+)
+```
+
+```{r combine_enrich}
+comb_enrich = combine_enrichments(up = up_enrich,
+                                  down = down_enrich)
+comb_sig = get_significant_annotations(comb_enrich, padjust <= 0.01, counts >= 2)
+comb_sig
+```

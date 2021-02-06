@@ -29,7 +29,6 @@
             Analysis](#principal-components-analysis)
     -   [Differential Analysis](#differential-analysis)
     -   [Functional Enrichment](#functional-enrichment)
-        -   [Data Needed](#data-needed)
 
 This RNASeq transcriptomics analysis will be carried out using R, a
 statistical programming language and interactive environment. I
@@ -676,11 +675,6 @@ fit.
 
     library(visualizationQualityControl)
     library(ggplot2)
-
-    ## Want to understand how all the pieces fit
-    ## together? Read R for Data Science:
-    ## https://r4ds.had.co.nz/
-
     adeno_scaled_counts = readRDS(here::here("data_files/adeno_scaled_counts.rds"))
     adeno_raw_counts = readRDS(here::here("data_files/adeno_raw_sub_counts.rds"))
     adeno_info = readRDS(here::here("data_files/adeno_info.rds"))
@@ -1041,9 +1035,137 @@ else.
 
 If you want some more background on the subject, I definitely recommend
 checking out one of the first papers on this topic by [Gavin
-Sherlock](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3037731/).
-
-#### Data Needed
+Sherlock](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3037731/). I also
+recommend reading up on what the [Gene Ontology
+is](http://geneontology.org/docs/go-annotations/).
 
 So the data we need for this are the significant gene lists, as well as
 the total genes measured in this experiment, and their annotations.
+
+##### Gene Lists
+
+We are going to use the gene info object from way, way back at the
+beginning of this tutorial to get the actual gene names.
+
+    gene_info = readRDS(here::here("data_files/recount_lung_gene_info.rds"))
+    all_genes = unique(unlist(gene_info$symbol))
+
+    sig_res = readRDS(here::here("data_files/adeno_deseq_sig.rds")) %>%
+      dplyr::mutate(gene_id = rownames(.)) %>%
+      dplyr::left_join(., gene_info, by = "gene_id")
+
+    sig_up = dplyr::filter(sig_res, log2FoldChange > 0) %>%
+      dplyr::pull(symbol) %>% unlist(.) %>% unique()
+    sig_down = dplyr::filter(sig_res, log2FoldChange < 0) %>%
+      dplyr::pull(symbol) %>% unlist(.) %>% unique()
+
+##### Annotationss
+
+And now we will get the Gene Ontology annotations for those genes
+directly from Bioconductor.
+
+    library(org.Hs.eg.db)
+
+    ## Loading required package: AnnotationDbi
+
+    ## 
+    ## Attaching package: 'AnnotationDbi'
+
+    ## The following object is masked from 'package:dplyr':
+    ## 
+    ##     select
+
+    ## 
+
+    library(GO.db)
+
+    ## 
+
+    library(categoryCompare2)
+
+    ## 
+    ## Attaching package: 'categoryCompare2'
+
+    ## The following object is masked from 'package:Biobase':
+    ## 
+    ##     annotation
+
+    ## The following object is masked from 'package:BiocGenerics':
+    ## 
+    ##     annotation
+
+    go_all_gene = select(org.Hs.eg.db, keys = all_genes, keytype = "SYMBOL", columns = c("GOALL", "ONTOLOGYALL"))
+
+    ## 'select()' returned 1:many mapping between
+    ## keys and columns
+
+    go_2_gene = split(go_all_gene$SYMBOL, go_all_gene$GOALL)
+    go_desc = select(GO.db, keys = names(go_2_gene), columns = "TERM", keytype = "GOID")$TERM
+
+    ## 'select()' returned 1:1 mapping between keys
+    ## and columns
+
+    names(go_desc) = names(go_2_gene)
+
+Now we create the `categoryCompare2` annotation object.
+
+    go_annotation = annotation(annotation_features = go_2_gene,
+                               description = go_desc,
+                               annotation_type = "GO")
+    go_annotation
+
+    ##       Annotation Type: GO 
+    ##          Feature Type: UNKNOWN 
+    ## Number of Annotations: 22660 
+    ##       Number of Genes: 19216
+
+##### Enrichments
+
+    up_enrich = hypergeometric_feature_enrichment(
+      new("hypergeom_features", significant = sig_up,
+          universe = all_genes, annotation = go_annotation),
+      p_adjust = "BH"
+    )
+    down_enrich = hypergeometric_feature_enrichment(
+      new("hypergeom_features", significant = sig_down,
+          universe = all_genes, annotation = go_annotation),
+      p_adjust = "BH"
+    )
+
+    comb_enrich = combine_enrichments(up = up_enrich,
+                                      down = down_enrich)
+    comb_sig = get_significant_annotations(comb_enrich, padjust <= 0.01, counts >= 2)
+    comb_sig
+
+    ## An object of class "combined_enrichment"
+    ## Slot "enriched":
+    ## $up
+    ##    Enrichment Method:  
+    ##      Annotation Type: GO 
+    ## Significant Features: 1434 
+    ##        Universe Size: 19216 
+    ## 
+    ## $down
+    ##    Enrichment Method:  
+    ##      Annotation Type: GO 
+    ## Significant Features: 661 
+    ##        Universe Size: 19216 
+    ## 
+    ## 
+    ## Slot "annotation":
+    ##       Annotation Type: GO 
+    ##          Feature Type: UNKNOWN 
+    ## Number of Annotations: 22660 
+    ##       Number of Genes: 19216 
+    ## 
+    ## Slot "statistics":
+    ## Signficance Cutoffs:
+    ##   padjust <= 0.01
+    ##   counts >= 2
+    ## 
+    ## Counts:
+    ##    up down counts
+    ## G1  1    1     22
+    ## G2  1    0    175
+    ## G3  0    1    370
+    ## G4  0    0  22093
