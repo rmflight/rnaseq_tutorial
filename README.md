@@ -28,6 +28,8 @@
         -   [Principal Components
             Analysis](#principal-components-analysis)
     -   [Differential Analysis](#differential-analysis)
+    -   [Functional Enrichment](#functional-enrichment)
+        -   [Data Needed](#data-needed)
 
 This RNASeq transcriptomics analysis will be carried out using R, a
 statistical programming language and interactive environment. I
@@ -537,17 +539,21 @@ really a list underneath, so we can iterate over specific pieces using
 
     ## project_name
 
-    ## [1] "Lung Squamous Cell Carcinoma" "Lung Adenocarcinoma"
+    ## [1] "Lung Squamous Cell Carcinoma"
+    ## [2] "Lung Adenocarcinoma"
 
     ## race
 
-    ## [1] "not reported"                     "white"                           
-    ## [3] "black or african american"        "asian"                           
+    ## [1] "not reported"                    
+    ## [2] "white"                           
+    ## [3] "black or african american"       
+    ## [4] "asian"                           
     ## [5] "american indian or alaska native"
 
     ## sample_type
 
-    ## [1] "Primary Tumor"       "Solid Tissue Normal" "Recurrent Tumor"
+    ## [1] "Primary Tumor"       "Solid Tissue Normal"
+    ## [3] "Recurrent Tumor"
 
     ## primary_site
 
@@ -555,13 +561,15 @@ really a list underneath, so we can iterate over specific pieces using
 
     ## tumor_stage
 
-    ##  [1] "stage iia"    "stage iib"    "stage ib"     "stage iiia"   "stage iv"    
-    ##  [6] "stage iiib"   "stage ia"     "not reported" "stage i"      "stage ii"    
-    ## [11] "stage iii"
+    ##  [1] "stage iia"    "stage iib"    "stage ib"    
+    ##  [4] "stage iiia"   "stage iv"     "stage iiib"  
+    ##  [7] "stage ia"     "not reported" "stage i"     
+    ## [10] "stage ii"     "stage iii"
 
     ## disease_type
 
-    ## [1] "Lung Squamous Cell Carcinoma" "Lung Adenocarcinoma"
+    ## [1] "Lung Squamous Cell Carcinoma"
+    ## [2] "Lung Adenocarcinoma"
 
 Using this information, we can start to think about how to slice and
 dice the data. For example, we probably want to use only one type of
@@ -570,14 +578,14 @@ primary tumors only, and also those that are from a higher stage.
 
 We start with 1156 total samples.
 
-    small_lung = dplyr::filter(lung_info, 
-                               disease_type == "Lung Squamous Cell Carcinoma",
+    adeno_info = dplyr::filter(lung_info, 
+                               disease_type %in% "Lung Adenocarcinoma",
                                !(tumor_stage %in% c("not reported", "stage ia", "stage i", "stage ib")),
                                !(sample_type %in% c("Recurrent Tumor")))
 
-This gives us 279 samples. Lets verify that we only have what we want:
+This gives us 264 samples. Lets verify that we only have what we want:
 
-    dplyr::select(small_lung, disease_type, tumor_stage, sample_type) %>%
+    dplyr::select(adeno_info, disease_type, tumor_stage, sample_type) %>%
       purrr::iwalk(., function(.x, .y){
         message(.y)
         print(unique(.x))
@@ -585,12 +593,12 @@ This gives us 279 samples. Lets verify that we only have what we want:
 
     ## disease_type
 
-    ## [1] "Lung Squamous Cell Carcinoma"
+    ## [1] "Lung Adenocarcinoma"
 
     ## tumor_stage
 
-    ## [1] "stage iia"  "stage iib"  "stage iv"   "stage iiib" "stage iiia" "stage ii"  
-    ## [7] "stage iii"
+    ## [1] "stage iib"  "stage iiia" "stage iia" 
+    ## [4] "stage iiib" "stage iv"   "stage ii"
 
     ## sample_type
 
@@ -599,39 +607,39 @@ This gives us 279 samples. Lets verify that we only have what we want:
 We also need to add something that is a bit more useful as an identifier
 of “normal” and “cancerous” tissue.
 
-    small_lung = dplyr::mutate(
-      small_lung,
+    adeno_info = dplyr::mutate(
+      adeno_info,
       disease = dplyr::case_when(
         grepl("Tumor", sample_type) ~ "cancer",
         grepl("Normal", sample_type) ~ "normal"
       ))
 
-    unique(small_lung$disease)
+    unique(adeno_info$disease)
 
     ## [1] "cancer" "normal"
 
-    table(small_lung$disease)
+    table(adeno_info$disease)
 
     ## 
     ## cancer normal 
-    ##    255     24
+    ##    236     28
 
-So, severely unbalanced, with 255 and only 24.
+So, severely unbalanced, with 236 and only 28.
 
 But now we can make a smaller version of the lung data with just these
 samples.
 
     # we have to transform this to upper because that is what is on the matrix
-    small_lung = dplyr::mutate(small_lung, sample_id2 = toupper(sample_id))
+    adeno_info = dplyr::mutate(adeno_info, sample_id2 = toupper(sample_id))
     lung_matrix = readRDS(here::here("data_files/recount_lung_raw_counts.rds"))
 
-    small_matrix = lung_matrix[, small_lung$sample_id2]
-    dim(small_matrix)
+    adeno_matrix = lung_matrix[, adeno_info$sample_id2]
+    dim(adeno_info)
 
-    ## [1] 58037   279
+    ## [1] 264  11
 
-    saveRDS(small_lung, file = here::here("data_files/small_lung_info.rds"))
-    saveRDS(small_matrix, file = here::here("data_files/small_lung_raw_counts.rds"))
+    saveRDS(adeno_info, file = here::here("data_files/adeno_info.rds"))
+    saveRDS(adeno_matrix, file = here::here("data_files/adeno_raw_counts.rds"))
 
 In addition to using the smaller set of samples, we can also select a
 smaller set of genes. We will look first for those that have a non-zero
@@ -639,19 +647,20 @@ value in at least one sample. And then we will take a random sample of
 those.
 
     set.seed(1234)
-    is_1 = purrr::map_lgl(seq(1, nrow(small_matrix)), function(in_row){
-      sum(small_matrix[in_row, ] > 0) > 0
+    is_1 = purrr::map_lgl(seq(1, nrow(adeno_matrix)), function(in_row){
+      sum(adeno_matrix[in_row, ] > 0) > 0
     })
-    use_rows = sample(which(is_1), 1000)
-    sub_lung = small_matrix[use_rows, ]
+    use_rows = sample(which(is_1), 6000)
+    adeno_raw_sub = adeno_matrix[use_rows, ]
+    saveRDS(adeno_raw_sub, file = here::here("data_files/adeno_raw_sub_counts.rds"))
 
-    scaled_lung = readRDS(here::here("data_files/recount_lung_scaled_counts.rds"))
-    small_scaled = scaled_lung[, small_lung$sample_id2]
-    sub_scaled = small_scaled[use_rows, ]
-    saveRDS(sub_lung, file = here::here("data_files/sub_lung_raw_counts.rds"))
+    scaled_counts = readRDS(here::here("data_files/recount_lung_scaled_counts.rds"))
+    adeno_scaled = scaled_counts[, adeno_info$sample_id2]
+    adeno_scaled_sub = adeno_scaled[use_rows, ]
 
-    saveRDS(small_scaled, file = here::here("data_files/small_lung_scaled_counts.rds"))
-    saveRDS(sub_scaled, file = here::here("data_files/sub_lung_scaled_counts.rds"))
+
+    saveRDS(adeno_scaled, file = here::here("data_files/adeno_scaled_counts.rds"))
+    saveRDS(adeno_scaled_sub, file = here::here("data_files/adeno_scaled_sub_counts.rds"))
 
 This is really, really useful, because if you are having memory problems
 with the full set, then you can use the much smaller subset to test your
@@ -667,8 +676,14 @@ fit.
 
     library(visualizationQualityControl)
     library(ggplot2)
-    sub_lung = readRDS(here::here("data_files/sub_lung_scaled_counts.rds"))
-    sub_info = readRDS(here::here("data_files/small_lung_info.rds"))
+
+    ## Want to understand how all the pieces fit
+    ## together? Read R for Data Science:
+    ## https://r4ds.had.co.nz/
+
+    adeno_scaled_counts = readRDS(here::here("data_files/adeno_scaled_counts.rds"))
+    adeno_raw_counts = readRDS(here::here("data_files/adeno_raw_sub_counts.rds"))
+    adeno_info = readRDS(here::here("data_files/adeno_info.rds"))
 
 #### Correlation
 
@@ -676,53 +691,58 @@ We use a special correlation that is able to incorporate missing values
 when it calculates a pairwise ranked correlation. You can read more
 about it
 [here](http://moseleybioinformaticslab.github.io/visualizationQualityControl/articles/ici-kendalltau.html).
-Notice here we used the **sub** matrix of 1000 genes so it will actually
+Notice here we used the **sub** matrix of 6000 genes so it will actually
 calculate. The correlations for this group are also available in the
-GitHub repo.
+GitHub repo, under `data_files/adeno_cor_6K.rds`.
 
     library(furrr)
     plan(multicore)
-    sample_cor = visqc_ici_kendallt(t(sub_lung))
+    sample_cor = visqc_ici_kendallt(t(adeno_raw_counts))
 
-    saveRDS(sample_cor, file = here::here("data_files/sub_lung_cor.rds"))
+    saveRDS(sample_cor, file = here::here("data_files/adeno_cor_6K.rds"))
 
-    sample_cor = readRDS(here::here("data_files/sub_lung_cor.rds"))
-    med_cor = median_correlations(sample_cor$cor, sub_info$disease)
+    sample_cor = readRDS(here::here("data_files/adeno_cor_6K.rds"))
+    all.equal(adeno_info$sample_id2, colnames(sample_cor$cor))
+
+    ## [1] TRUE
+
+    med_cor = median_correlations(sample_cor$cor, adeno_info$disease)
 
     ggplot(med_cor, aes(x = med_cor)) + geom_histogram() + 
       facet_wrap(~ sample_class, ncol = 1)
 
-    ## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+    ## `stat_bin()` using `bins = 30`. Pick better
+    ## value with `binwidth`.
 
 ![](README_files/figure-markdown_strict/load_saved_cor-1.png)
 
-In this plot, we’ve plotted the distributions of the median correlations
-for both of the cancer and the normal samples. Notice that in each of
-these, there is at least one outlier sample. We can also see that the
-“normal” distribution is in general higher than the “cancer”
-distribution.
+In this plot, we’ve plotted the distributions of the median
+sample-sample correlations for both of the cancer and the normal
+samples. Notice that in each of these, there is at least one outlier
+sample. We can also see that the “normal” distribution is in general
+higher than the “cancer” distribution.
 
 We could also look at these in a heatmap, and we will see that each of
 these would have different correlations to the others.
 
     use_cor = sample_cor$cor
     # make a short id, because our sample_id's are really, really long
-    sub_info$short_id = paste0("S", seq(1, nrow(sub_info)))
+    adeno_info$short_id = paste0("S", seq(1, nrow(adeno_info)))
     # we have to change them here too, because we don't want them to 
     # overwhelm the heatmap
-    colnames(use_cor) = rownames(use_cor) = sub_info$short_id
-    rownames(sub_info) = sub_info$short_id
-    cor_order = similarity_reorderbyclass(use_cor, sub_info[, c("disease"), drop = FALSE], transform = "sub_1")
+    colnames(use_cor) = rownames(use_cor) = adeno_info$short_id
+    rownames(adeno_info) = adeno_info$short_id
+    cor_order = similarity_reorderbyclass(use_cor, adeno_info[, c("disease"), drop = FALSE], transform = "sub_1")
 
     library(circlize)
     colormap = colorRamp2(seq(0.5, 1, length.out = 20), viridis::viridis(20))
 
     data_legend = generate_group_colors(2)
     names(data_legend) = c("cancer", "normal")
-    row_data = sub_info[, "disease", drop = FALSE]
+    row_data = adeno_info[, "disease", drop = FALSE]
     row_annotation = list(disease = data_legend)
 
-    visqc_heatmap(use_cor, colormap, "Disease Correlation",
+    visqc_heatmap(use_cor, colormap, "Sample-Sample Correlation",
                   name = "ICI-Kt", row_color_data = row_data,
                   row_color_list = row_annotation, col_color_data = row_data,
                   col_color_list = row_annotation, row_order = cor_order$indices,
@@ -732,14 +752,15 @@ these would have different correlations to the others.
 
 #### Outlier Fraction
 
-For this one we also used the **sub** set matrix.
+For this one we will use the **full** matrix, because it is still quick.
 
-    out_frac = outlier_fraction(t(sub_lung), sub_info$disease)
+    out_frac = outlier_fraction(t(adeno_scaled_counts), adeno_info$disease)
 
     ggplot(out_frac, aes(x = frac)) + geom_histogram() + 
       facet_wrap(~ sample_class, ncol = 1)
 
-    ## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+    ## `stat_bin()` using `bins = 30`. Pick better
+    ## value with `binwidth`.
 
 ![](README_files/figure-markdown_strict/out_frac-1.png)
 
@@ -756,7 +777,8 @@ combined score, for each of “normal” and “cancer”.
       geom_histogram(position = "identity") +
       facet_wrap(~ sample_class.frac, ncol = 1)
 
-    ## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+    ## `stat_bin()` using `bins = 30`. Pick better
+    ## value with `binwidth`.
 
 ![](README_files/figure-markdown_strict/find_outliers-1.png)
 
@@ -765,21 +787,24 @@ combined score, for each of “normal” and “cancer”.
 Now we can combine the outlier information with the previous information
 we had.
 
-    names(sub_info)
+    names(adeno_info)
 
-    ##  [1] "project"      "sample_id"    "gender"       "project_name" "race"        
-    ##  [6] "sample_type"  "primary_site" "tumor_stage"  "disease_type" "disease"     
-    ## [11] "sample_id2"   "short_id"
+    ##  [1] "project"      "sample_id"    "gender"      
+    ##  [4] "project_name" "race"         "sample_type" 
+    ##  [7] "primary_site" "tumor_stage"  "disease_type"
+    ## [10] "disease"      "sample_id2"   "short_id"
 
     names(outliers)
 
-    ## [1] "sample_id"         "med_cor"           "sample_class.cor"  "sample_class.frac"
-    ## [5] "frac"              "score"             "outlier"
+    ## [1] "sample_id"         "med_cor"          
+    ## [3] "sample_class.cor"  "sample_class.frac"
+    ## [5] "frac"              "score"            
+    ## [7] "outlier"
 
-    sub_info_outliers = dplyr::left_join(sub_info,
+    adeno_info_outliers = dplyr::left_join(adeno_info,
                                          outliers[, c("sample_id", "score", "outlier")], 
                                          by = c("sample_id2" = "sample_id"))
-    saveRDS(sub_info_outliers, file = here::here("data_files/small_lung_info_outliers.rds"))
+    saveRDS(adeno_info_outliers, file = here::here("data_files/adeno_info_outliers.rds"))
 
 #### Principal Components Analysis
 
@@ -795,9 +820,8 @@ so we want to actually transform using `log(value + 1)` to make it work,
 and this is a built-in function that makes sure 1 is added in a sane way
 for large and small values.
 
-    scaled_counts = readRDS(here::here("data_files/small_lung_scaled_counts.rds"))
-    kept_info = dplyr::filter(sub_info_outliers, !outlier)
-    kept_counts = log1p(scaled_counts[, kept_info$sample_id2])
+    kept_info = dplyr::filter(adeno_info_outliers, !outlier)
+    kept_counts = log1p(adeno_scaled_counts[, kept_info$sample_id2])
 
     kept_pca = prcomp(t(kept_counts), center = TRUE, scale. = FALSE)
 
@@ -837,9 +861,11 @@ We will use the `sample_info` to select the samples, and we will use the
 
     ## The following objects are masked from 'package:parallel':
     ## 
-    ##     clusterApply, clusterApplyLB, clusterCall, clusterEvalQ, clusterExport,
-    ##     clusterMap, parApply, parCapply, parLapply, parLapplyLB, parRapply,
-    ##     parSapply, parSapplyLB
+    ##     clusterApply, clusterApplyLB,
+    ##     clusterCall, clusterEvalQ,
+    ##     clusterExport, clusterMap, parApply,
+    ##     parCapply, parLapply, parLapplyLB,
+    ##     parRapply, parSapply, parSapplyLB
 
     ## The following objects are masked from 'package:dplyr':
     ## 
@@ -851,12 +877,17 @@ We will use the `sample_info` to select the samples, and we will use the
 
     ## The following objects are masked from 'package:base':
     ## 
-    ##     anyDuplicated, append, as.data.frame, basename, cbind, colnames, dirname,
-    ##     do.call, duplicated, eval, evalq, Filter, Find, get, grep, grepl,
-    ##     intersect, is.unsorted, lapply, Map, mapply, match, mget, order, paste,
-    ##     pmax, pmax.int, pmin, pmin.int, Position, rank, rbind, Reduce, rownames,
-    ##     sapply, setdiff, sort, table, tapply, union, unique, unsplit, which,
-    ##     which.max, which.min
+    ##     anyDuplicated, append, as.data.frame,
+    ##     basename, cbind, colnames, dirname,
+    ##     do.call, duplicated, eval, evalq,
+    ##     Filter, Find, get, grep, grepl,
+    ##     intersect, is.unsorted, lapply, Map,
+    ##     mapply, match, mget, order, paste, pmax,
+    ##     pmax.int, pmin, pmin.int, Position,
+    ##     rank, rbind, Reduce, rownames, sapply,
+    ##     setdiff, sort, table, tapply, union,
+    ##     unique, unsplit, which, which.max,
+    ##     which.min
 
     ## 
     ## Attaching package: 'S4Vectors'
@@ -888,9 +919,10 @@ We will use the `sample_info` to select the samples, and we will use the
 
     ## Welcome to Bioconductor
     ## 
-    ##     Vignettes contain introductory material; view with 'browseVignettes()'. To
-    ##     cite Bioconductor, see 'citation("Biobase")', and for packages
-    ##     'citation("pkgname")'.
+    ##     Vignettes contain introductory material;
+    ##     view with 'browseVignettes()'. To cite
+    ##     Bioconductor, see 'citation("Biobase")',
+    ##     and for packages 'citation("pkgname")'.
 
     ## Loading required package: DelayedArray
 
@@ -912,64 +944,106 @@ We will use the `sample_info` to select the samples, and we will use the
 
     ## The following objects are masked from 'package:matrixStats':
     ## 
-    ##     colMaxs, colMins, colRanges, rowMaxs, rowMins, rowRanges
+    ##     colMaxs, colMins, colRanges, rowMaxs,
+    ##     rowMins, rowRanges
 
     ## The following objects are masked from 'package:base':
     ## 
     ##     aperm, apply, rowsum
 
-    sample_info = readRDS(here::here("data_files/small_lung_info_outliers.rds"))
-    count_data = readRDS(here::here("data_files/small_lung_raw_counts.rds"))
+    adeno_info_outliers = readRDS(here::here("data_files/adeno_info_outliers.rds"))
+    count_data = readRDS(here::here("data_files/adeno_raw_counts.rds"))
 
-    sample_info = dplyr::filter(sample_info, !outlier)
-    count_data = count_data[, sample_info$sample_id2]
+    adeno_info_outliers = dplyr::filter(adeno_info_outliers, !outlier)
+    count_data = count_data[, adeno_info_outliers$sample_id2]
 
 And now we create the object that DESeq2 needs for the analysis.
 
     # we need to convert the disease to a factor for the design of the comparisons
-    sample_info$disease = factor(sample_info$disease, levels = c("normal", "cancer"))
+    adeno_info_outliers$disease = factor(adeno_info_outliers$disease, levels = c("normal", "cancer"))
     dds = DESeqDataSetFromMatrix(countData = count_data,
-                                 colData = sample_info,
+                                 colData = adeno_info_outliers,
                                  design = ~disease)
     # this takes a few minutes to run, so I didn't run it
     # directly in the tutorial
     dds = DESeq(dds)
     res = results(dds)
-    saveRDS(res, file = here::here("data_files/small_lung_deseq_results.rds"))
+    saveRDS(res, file = here::here("data_files/adeno_deseq_results.rds"))
 
-    res = readRDS(here::here("data_files/small_lung_deseq_results.rds"))
+    res = readRDS(here::here("data_files/adeno_deseq_results.rds"))
     res
 
     ## log2 fold change (MLE): disease cancer vs normal 
     ## Wald test p-value: disease cancer vs normal 
     ## DataFrame with 58037 rows and 6 columns
-    ##                      baseMean log2FoldChange     lfcSE       stat      pvalue
-    ##                     <numeric>      <numeric> <numeric>  <numeric>   <numeric>
-    ## ENSG00000000003.14 3314.28806       1.037849 0.1468198    7.06886 1.56211e-12
-    ## ENSG00000000005.5     1.19293      -1.255431 0.6480657   -1.93720 5.27213e-02
-    ## ENSG00000000419.12 2408.50218       0.741855 0.1166827    6.35788 2.04556e-10
-    ## ENSG00000000457.13 1240.32814       0.394256 0.0988883    3.98688 6.69468e-05
-    ## ENSG00000000460.16 1201.06850       1.554393 0.1198491   12.96958 1.82016e-38
-    ## ...                       ...            ...       ...        ...         ...
-    ## ENSG00000283695.1   0.0342914      0.2628614  3.059119  0.0859272  0.93152432
-    ## ENSG00000283696.1  31.9822873     -0.5211121  0.190878 -2.7300791  0.00633191
-    ## ENSG00000283697.1  58.0977372      0.0509825  0.144599  0.3525784  0.72440450
-    ## ENSG00000283698.1   0.3498825      0.3165290  0.508796  0.6221137  0.53386711
-    ## ENSG00000283699.1   0.0506252     -0.0783224  2.226870 -0.0351715  0.97194298
-    ##                           padj
-    ##                      <numeric>
-    ## ENSG00000000003.14 1.04694e-11
-    ## ENSG00000000005.5  8.31141e-02
-    ## ENSG00000000419.12 1.10383e-09
-    ## ENSG00000000457.13 1.81601e-04
-    ## ENSG00000000460.16 8.15301e-37
-    ## ...                        ...
-    ## ENSG00000283695.1           NA
-    ## ENSG00000283696.1    0.0122532
-    ## ENSG00000283697.1    0.7788116
-    ## ENSG00000283698.1    0.6107716
-    ## ENSG00000283699.1           NA
+    ##                      baseMean log2FoldChange
+    ##                     <numeric>      <numeric>
+    ## ENSG00000000003.14 2980.04372       1.047969
+    ## ENSG00000000005.5     7.60756       2.285406
+    ## ENSG00000000419.12 1501.37515       0.154944
+    ## ENSG00000000457.13 1121.24995       0.416828
+    ## ENSG00000000460.16  759.36940       1.117129
+    ## ...                       ...            ...
+    ## ENSG00000283695.1   0.0657895     -0.2853105
+    ## ENSG00000283696.1  37.1191671     -0.1679310
+    ## ENSG00000283697.1  42.4001328      0.1553250
+    ## ENSG00000283698.1   0.5227232      0.0909751
+    ## ENSG00000283699.1   0.0690275     -0.3883752
+    ##                        lfcSE      stat
+    ##                    <numeric> <numeric>
+    ## ENSG00000000003.14 0.1410078   7.43199
+    ## ENSG00000000005.5  0.7518177   3.03984
+    ## ENSG00000000419.12 0.1097474   1.41183
+    ## ENSG00000000457.13 0.0892688   4.66936
+    ## ENSG00000000460.16 0.1017870  10.97516
+    ## ...                      ...       ...
+    ## ENSG00000283695.1   1.932684 -0.147624
+    ## ENSG00000283696.1   0.166336 -1.009589
+    ## ENSG00000283697.1   0.116881  1.328910
+    ## ENSG00000283698.1   0.498562  0.182475
+    ## ENSG00000283699.1   1.670033 -0.232555
+    ##                         pvalue        padj
+    ##                      <numeric>   <numeric>
+    ## ENSG00000000003.14 1.06973e-13 1.22651e-12
+    ## ENSG00000000005.5  2.36704e-03 5.73466e-03
+    ## ENSG00000000419.12 1.58001e-01 2.37857e-01
+    ## ENSG00000000457.13 3.02136e-06 1.24007e-05
+    ## ENSG00000000460.16 5.03176e-28 2.60668e-26
+    ## ...                        ...         ...
+    ## ENSG00000283695.1     0.882640          NA
+    ## ENSG00000283696.1     0.312692    0.417595
+    ## ENSG00000283697.1     0.183878    0.269469
+    ## ENSG00000283698.1     0.855210    0.900477
+    ## ENSG00000283699.1     0.816107          NA
 
     # we convert to a data.frame, 
     # and then filter down to most significant and biggest changes
-    sig_res = as.data.frame(res) %>% dplyr::filter(padj <= 0.001, abs(log2FoldChange) >= 2)
+    res = as.data.frame(res) 
+    sig_res = dplyr::filter(res, padj <= 0.001, abs(log2FoldChange) >= 2)
+    saveRDS(sig_res, here::here("data_files/adeno_deseq_sig.rds"))
+
+### Functional Enrichment
+
+So you got a list of significant genes! Now what?? Ideally, we want to
+be able to look for groups of genes with shared functionality. One
+simple way to do that is to ask:
+
+-   For some shared functionality among the differential genes, how many
+    of the differential genes have it?
+-   If I select the same number of differential genes at random from the
+    genome, how many of those genes will have the shared functionality?
+
+These values can be approximated using hypergeometric distribution and
+test, which is what we can easily do using the `categoryCompare2`
+package. We are using it because it has facilities for some really neat
+things. However, if you don’t like it, you can easily use something
+else.
+
+If you want some more background on the subject, I definitely recommend
+checking out one of the first papers on this topic by [Gavin
+Sherlock](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3037731/).
+
+#### Data Needed
+
+So the data we need for this are the significant gene lists, as well as
+the total genes measured in this experiment, and their annotations.

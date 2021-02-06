@@ -358,17 +358,17 @@ We also want to work with primary tumors only, and also those that are from a hi
 We start with `r nrow(lung_info)` total samples.
 
 ```{r filter_samples}
-small_lung = dplyr::filter(lung_info, 
-                           disease_type == "Lung Squamous Cell Carcinoma",
+adeno_info = dplyr::filter(lung_info, 
+                           disease_type %in% "Lung Adenocarcinoma",
                            !(tumor_stage %in% c("not reported", "stage ia", "stage i", "stage ib")),
                            !(sample_type %in% c("Recurrent Tumor")))
 ```
 
-This gives us `r nrow(small_lung)` samples.
+This gives us `r nrow(adeno_info)` samples.
 Lets verify that we only have what we want:
 
 ```{r double_check_filter}
-dplyr::select(small_lung, disease_type, tumor_stage, sample_type) %>%
+dplyr::select(adeno_info, disease_type, tumor_stage, sample_type) %>%
   purrr::iwalk(., function(.x, .y){
     message(.y)
     print(unique(.x))
@@ -378,31 +378,31 @@ dplyr::select(small_lung, disease_type, tumor_stage, sample_type) %>%
 We also need to add something that is a bit more useful as an identifier of "normal" and "cancerous" tissue.
 
 ```{r label_cancer_normal}
-small_lung = dplyr::mutate(
-  small_lung,
+adeno_info = dplyr::mutate(
+  adeno_info,
   disease = dplyr::case_when(
     grepl("Tumor", sample_type) ~ "cancer",
     grepl("Normal", sample_type) ~ "normal"
   ))
 
-unique(small_lung$disease)
+unique(adeno_info$disease)
 
-table(small_lung$disease)
+table(adeno_info$disease)
 ```
 
-So, severely unbalanced, with `r sum(grepl("cancer", small_lung$disease))` and only `r sum(grepl("normal", small_lung$disease))`.
+So, severely unbalanced, with `r sum(grepl("cancer", adeno_info$disease))` and only `r sum(grepl("normal", adeno_info$disease))`.
 
 But now we can make a smaller version of the lung data with just these samples.
 
 ```{r make_small_data}
 # we have to transform this to upper because that is what is on the matrix
-small_lung = dplyr::mutate(small_lung, sample_id2 = toupper(sample_id))
+adeno_info = dplyr::mutate(adeno_info, sample_id2 = toupper(sample_id))
 lung_matrix = readRDS(here::here("data_files/recount_lung_raw_counts.rds"))
 
-small_matrix = lung_matrix[, small_lung$sample_id2]
-dim(small_matrix)
-saveRDS(small_lung, file = here::here("data_files/small_lung_info.rds"))
-saveRDS(small_matrix, file = here::here("data_files/small_lung_raw_counts.rds"))
+adeno_matrix = lung_matrix[, adeno_info$sample_id2]
+dim(adeno_info)
+saveRDS(adeno_info, file = here::here("data_files/adeno_info.rds"))
+saveRDS(adeno_matrix, file = here::here("data_files/adeno_raw_counts.rds"))
 ```
 
 In addition to using the smaller set of samples, we can also select a smaller set of genes.
@@ -411,19 +411,20 @@ And then we will take a random sample of those.
 
 ```{r subsample_small, eval = FALSE}
 set.seed(1234)
-is_1 = purrr::map_lgl(seq(1, nrow(small_matrix)), function(in_row){
-  sum(small_matrix[in_row, ] > 0) > 0
+is_1 = purrr::map_lgl(seq(1, nrow(adeno_matrix)), function(in_row){
+  sum(adeno_matrix[in_row, ] > 0) > 0
 })
-use_rows = sample(which(is_1), 1000)
-sub_lung = small_matrix[use_rows, ]
+use_rows = sample(which(is_1), 6000)
+adeno_raw_sub = adeno_matrix[use_rows, ]
+saveRDS(adeno_raw_sub, file = here::here("data_files/adeno_raw_sub_counts.rds"))
 
-scaled_lung = readRDS(here::here("data_files/recount_lung_scaled_counts.rds"))
-small_scaled = scaled_lung[, small_lung$sample_id2]
-sub_scaled = small_scaled[use_rows, ]
-saveRDS(sub_lung, file = here::here("data_files/sub_lung_raw_counts.rds"))
+scaled_counts = readRDS(here::here("data_files/recount_lung_scaled_counts.rds"))
+adeno_scaled = scaled_counts[, adeno_info$sample_id2]
+adeno_scaled_sub = adeno_scaled[use_rows, ]
 
-saveRDS(small_scaled, file = here::here("data_files/small_lung_scaled_counts.rds"))
-saveRDS(sub_scaled, file = here::here("data_files/sub_lung_scaled_counts.rds"))
+
+saveRDS(adeno_scaled, file = here::here("data_files/adeno_scaled_counts.rds"))
+saveRDS(adeno_scaled_sub, file = here::here("data_files/adeno_scaled_sub_counts.rds"))
 ```
 
 This is really, really useful, because if you are having memory problems with the full set, then you can use the much smaller subset to test your code with, work it all out, and then run the code somewhere else with more memory available.
@@ -436,34 +437,36 @@ We can use correlation amongst the samples to check if they match each other and
 ```{r load_data}
 library(visualizationQualityControl)
 library(ggplot2)
-sub_lung = readRDS(here::here("data_files/sub_lung_scaled_counts.rds"))
-sub_info = readRDS(here::here("data_files/small_lung_info.rds"))
+adeno_scaled_counts = readRDS(here::here("data_files/adeno_scaled_counts.rds"))
+adeno_raw_counts = readRDS(here::here("data_files/adeno_raw_sub_counts.rds"))
+adeno_info = readRDS(here::here("data_files/adeno_info.rds"))
 ```
 
 #### Correlation
 
 We use a special correlation that is able to incorporate missing values when it calculates a pairwise ranked correlation.
 You can read more about it [here](http://moseleybioinformaticslab.github.io/visualizationQualityControl/articles/ici-kendalltau.html).
-Notice here we used the **sub** matrix of 1000 genes so it will actually calculate.
-The correlations for this group are also available in the GitHub repo.
+Notice here we used the **sub** matrix of 6000 genes so it will actually calculate.
+The correlations for this group are also available in the GitHub repo, under `data_files/adeno_cor_6K.rds`.
 
 ```{r med_cor, eval = FALSE}
 library(furrr)
 plan(multicore)
-sample_cor = visqc_ici_kendallt(t(sub_lung))
+sample_cor = visqc_ici_kendallt(t(adeno_raw_counts))
 
-saveRDS(sample_cor, file = here::here("data_files/sub_lung_cor.rds"))
+saveRDS(sample_cor, file = here::here("data_files/adeno_cor_6K.rds"))
 ```
 
 ```{r load_saved_cor}
-sample_cor = readRDS(here::here("data_files/sub_lung_cor.rds"))
-med_cor = median_correlations(sample_cor$cor, sub_info$disease)
+sample_cor = readRDS(here::here("data_files/adeno_cor_6K.rds"))
+all.equal(adeno_info$sample_id2, colnames(sample_cor$cor))
+med_cor = median_correlations(sample_cor$cor, adeno_info$disease)
 
 ggplot(med_cor, aes(x = med_cor)) + geom_histogram() + 
   facet_wrap(~ sample_class, ncol = 1)
 ```
 
-In this plot, we've plotted the distributions of the median correlations for both of the cancer and the normal samples.
+In this plot, we've plotted the distributions of the median sample-sample correlations for both of the cancer and the normal samples.
 Notice that in each of these, there is at least one outlier sample.
 We can also see that the "normal" distribution is in general higher than the "cancer" distribution.
 
@@ -472,22 +475,22 @@ We could also look at these in a heatmap, and we will see that each of these wou
 ```{r heatmap, message=FALSE}
 use_cor = sample_cor$cor
 # make a short id, because our sample_id's are really, really long
-sub_info$short_id = paste0("S", seq(1, nrow(sub_info)))
+adeno_info$short_id = paste0("S", seq(1, nrow(adeno_info)))
 # we have to change them here too, because we don't want them to 
 # overwhelm the heatmap
-colnames(use_cor) = rownames(use_cor) = sub_info$short_id
-rownames(sub_info) = sub_info$short_id
-cor_order = similarity_reorderbyclass(use_cor, sub_info[, c("disease"), drop = FALSE], transform = "sub_1")
+colnames(use_cor) = rownames(use_cor) = adeno_info$short_id
+rownames(adeno_info) = adeno_info$short_id
+cor_order = similarity_reorderbyclass(use_cor, adeno_info[, c("disease"), drop = FALSE], transform = "sub_1")
 
 library(circlize)
 colormap = colorRamp2(seq(0.5, 1, length.out = 20), viridis::viridis(20))
 
 data_legend = generate_group_colors(2)
 names(data_legend) = c("cancer", "normal")
-row_data = sub_info[, "disease", drop = FALSE]
+row_data = adeno_info[, "disease", drop = FALSE]
 row_annotation = list(disease = data_legend)
 
-visqc_heatmap(use_cor, colormap, "Disease Correlation",
+visqc_heatmap(use_cor, colormap, "Sample-Sample Correlation",
               name = "ICI-Kt", row_color_data = row_data,
               row_color_list = row_annotation, col_color_data = row_data,
               col_color_list = row_annotation, row_order = cor_order$indices,
@@ -496,10 +499,10 @@ visqc_heatmap(use_cor, colormap, "Disease Correlation",
 
 #### Outlier Fraction
 
-For this one we also used the **sub** set matrix.
+For this one we will use the **full** matrix, because it is still quick.
 
 ```{r out_frac}
-out_frac = outlier_fraction(t(sub_lung), sub_info$disease)
+out_frac = outlier_fraction(t(adeno_scaled_counts), adeno_info$disease)
 
 ggplot(out_frac, aes(x = frac)) + geom_histogram() + 
   facet_wrap(~ sample_class, ncol = 1)
@@ -524,13 +527,13 @@ ggplot(outliers, aes(x = score, fill = outlier)) +
 Now we can combine the outlier information with the previous information we had.
 
 ```{r add_outlier_info}
-names(sub_info)
+names(adeno_info)
 names(outliers)
 
-sub_info_outliers = dplyr::left_join(sub_info,
+adeno_info_outliers = dplyr::left_join(adeno_info,
                                      outliers[, c("sample_id", "score", "outlier")], 
                                      by = c("sample_id2" = "sample_id"))
-saveRDS(sub_info_outliers, file = here::here("data_files/small_lung_info_outliers.rds"))
+saveRDS(adeno_info_outliers, file = here::here("data_files/adeno_info_outliers.rds"))
 ```
 
 #### Principal Components Analysis
@@ -544,9 +547,8 @@ We also log-transform because PCA doesn't like the error structure in the raw da
 `log1p` is used because we have zero values, so we want to actually transform using `log(value + 1)` to make it work, and this is a built-in function that makes sure 1 is added in a sane way for large and small values.
 
 ```{r pca_check}
-scaled_counts = readRDS(here::here("data_files/small_lung_scaled_counts.rds"))
-kept_info = dplyr::filter(sub_info_outliers, !outlier)
-kept_counts = log1p(scaled_counts[, kept_info$sample_id2])
+kept_info = dplyr::filter(adeno_info_outliers, !outlier)
+kept_counts = log1p(adeno_scaled_counts[, kept_info$sample_id2])
 
 kept_pca = prcomp(t(kept_counts), center = TRUE, scale. = FALSE)
 
@@ -570,33 +572,55 @@ We will use the `sample_info` to select the samples, and we will use the `raw` c
 ```{r deseq2_load_filter}
 library(DESeq2)
 
-sample_info = readRDS(here::here("data_files/small_lung_info_outliers.rds"))
-count_data = readRDS(here::here("data_files/small_lung_raw_counts.rds"))
+adeno_info_outliers = readRDS(here::here("data_files/adeno_info_outliers.rds"))
+count_data = readRDS(here::here("data_files/adeno_raw_counts.rds"))
 
-sample_info = dplyr::filter(sample_info, !outlier)
-count_data = count_data[, sample_info$sample_id2]
+adeno_info_outliers = dplyr::filter(adeno_info_outliers, !outlier)
+count_data = count_data[, adeno_info_outliers$sample_id2]
 ```
 
 And now we create the object that DESeq2 needs for the analysis.
 
 ```{r deseq_create, eval = FALSE}
 # we need to convert the disease to a factor for the design of the comparisons
-sample_info$disease = factor(sample_info$disease, levels = c("normal", "cancer"))
+adeno_info_outliers$disease = factor(adeno_info_outliers$disease, levels = c("normal", "cancer"))
 dds = DESeqDataSetFromMatrix(countData = count_data,
-                             colData = sample_info,
+                             colData = adeno_info_outliers,
                              design = ~disease)
 # this takes a few minutes to run, so I didn't run it
 # directly in the tutorial
 dds = DESeq(dds)
 res = results(dds)
-saveRDS(res, file = here::here("data_files/small_lung_deseq_results.rds"))
+saveRDS(res, file = here::here("data_files/adeno_deseq_results.rds"))
 ```
 
 ```{r deseq_res}
-res = readRDS(here::here("data_files/small_lung_deseq_results.rds"))
+res = readRDS(here::here("data_files/adeno_deseq_results.rds"))
 res
 
 # we convert to a data.frame, 
 # and then filter down to most significant and biggest changes
-sig_res = as.data.frame(res) %>% dplyr::filter(padj <= 0.001, abs(log2FoldChange) >= 2)
+res = as.data.frame(res) 
+sig_res = dplyr::filter(res, padj <= 0.001, abs(log2FoldChange) >= 2)
+saveRDS(sig_res, here::here("data_files/adeno_deseq_sig.rds"))
 ```
+
+### Functional Enrichment
+
+So you got a list of significant genes!
+Now what??
+Ideally, we want to be able to look for groups of genes with shared functionality.
+One simple way to do that is to ask:
+
+* For some shared functionality among the differential genes, how many of the differential genes have it?
+* If I select the same number of differential genes at random from the genome, how many of those genes will have the shared functionality?
+
+These values can be approximated using hypergeometric distribution and test, which is what we can easily do using the `categoryCompare2` package.
+We are using it because it has facilities for some really neat things.
+However, if you don't like it, you can easily use something else.
+
+If you want some more background on the subject, I definitely recommend checking out one of the first papers on this topic by [Gavin Sherlock](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3037731/).
+
+#### Data Needed
+
+So the data we need for this are the significant gene lists, as well as the total genes measured in this experiment, and their annotations.
