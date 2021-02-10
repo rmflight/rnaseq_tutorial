@@ -687,3 +687,57 @@ comb_enrich = combine_enrichments(up = up_enrich,
 comb_sig = get_significant_annotations(comb_enrich, padjust <= 0.01, counts >= 2)
 comb_sig
 ```
+
+Very cool, we have shared annotations to both up and down genes, as well as some that are specific to each.
+Now, how do we see what they are?
+
+One way is to use a graph, where each annotation is linked to others based on their shared genes.
+
+```{r generate_graph}
+graph_sig = generate_annotation_graph(comb_sig)
+graph_sig
+```
+
+That is a **lot** of edges!
+Like, way, way too many.
+Lets remove a bunch of them.
+What we are going to do is remove those edges where less than 80% (the 0.8) of the genes are shared between the annotations.
+
+```{r cut_edges}
+graph_sig = remove_edges(graph_sig, 0.8)
+graph_sig
+```
+
+Much better!
+
+Now lets generate color for each group, and do some grouping.
+
+```{r colors_grouping}
+assign_sig = annotation_combinations(graph_sig)
+assign_sig = assign_colors(assign_sig)
+communities_sig = assign_communities(graph_sig)
+community_labels = label_go_communities(communities_sig)
+```
+
+We can look at these in a table:
+
+```{r sig_table}
+table_sig = table_from_graph(graph_sig, assign_sig, community_labels)
+knitr::kable(table_sig, digits = 2)
+```
+
+And put them in a network widget:
+
+```{r generate_visnetwork}
+network_sig = graph_to_visnetwork(graph_sig, assign_sig, community_labels)
+```
+
+```{r out_vis, eval = FALSE}
+# we don't run this in the tutorial, because it results in a big
+# json object 
+vis_visnetwork(network_sig)
+```
+
+```{r show_legend}
+generate_legend(assign_sig, img = TRUE)
+```
