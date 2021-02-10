@@ -9,6 +9,10 @@ editor_options:
   chunk_output_type: console
 ---
 
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+```
+
 This RNASeq transcriptomics analysis will be carried out using R, a statistical programming language and interactive environment. I recommend using the RStudio interactive development environment, because it allows us to easily interact with R, and sets up “projects” that control where data is found.
 
 ## Included Data
@@ -719,11 +723,14 @@ communities_sig = assign_communities(graph_sig)
 community_labels = label_go_communities(communities_sig)
 ```
 
-We can look at these in a table:
+We can look at these in a table.
+We will only display the first 10 rows here, you can look at the full table in a [tab delimited file](data_files/enrichment_table.txt).
 
 ```{r sig_table}
 table_sig = table_from_graph(graph_sig, assign_sig, community_labels)
-knitr::kable(table_sig, digits = 2)
+write.table(table_sig, file = here::here("data_files/enrichment_table.txt"),
+            sep = "\t", row.names = FALSE, col.names = TRUE)
+knitr::kable(table_sig[1:20, ], digits = 2)
 ```
 
 And put them in a network widget:
