@@ -746,5 +746,5 @@ vis_visnetwork(network_sig)
 ```
 
 ```{r show_legend}
-generate_legend(assign_sig, img = TRUE)
+generate_legend(assign_sig)
 ```
