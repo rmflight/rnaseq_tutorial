@@ -720,7 +720,7 @@ Now lets generate color for each group, and do some grouping.
 assign_sig = annotation_combinations(graph_sig)
 assign_sig = assign_colors(assign_sig)
 communities_sig = assign_communities(graph_sig)
-community_labels = label_go_communities(communities_sig)
+community_labels = label_communities(communities_sig, go_annotation)
 ```
 
 We can look at these in a table.
@@ -747,4 +747,38 @@ vis_visnetwork(network_sig)
 
 ```{r show_legend}
 generate_legend(assign_sig)
+```
+
+#### Back to Original Data
+
+A lot of times, we want to be able to query our original data set, asking what genes are annotated to the GO terms as well as the information about them.
+For this to work, we have to first create the correct mapping of SYMBOL to genes.
+
+```{r symbol_genes}
+all_gene_symbol = sig_res %>%
+  dplyr::select(gene_id, symbol)
+symbol_2_gene = purrr::map_df(seq(1, nrow(all_gene_symbol)),
+                              function(in_row){
+                                data.frame(gene_id = all_gene_symbol$gene_id[in_row],
+                                           symbol = unlist(all_gene_symbol$symbol[in_row]))
+                              })
+```
+
+And then merge this back with the original data.
+
+```{r merge_back}
+sig_res2 = dplyr::left_join(
+  sig_res %>%
+    dplyr::select(-symbol), all_gene_symbol, by = "gene_id"
+)
+```
+
+Nice.
+Now we can filter this back down to what is specific to the up and down enrichments we had earlier.
+
+```{r filter_back_enrichment}
+up_data = sig_res2 %>%
+  dplyr::filter(symbol %in% sig_up)
+down_data = sig_res2 %>%
+  dplyr::filter(symbol %in% sig_down)
 ```
