@@ -907,6 +907,7 @@ directly from Bioconductor.
     library(categoryCompare2)
     go_all_gene = select(org.Hs.eg.db, keys = all_genes, keytype = "SYMBOL", columns = c("GOALL", "ONTOLOGYALL"))
     go_2_gene = split(go_all_gene$SYMBOL, go_all_gene$GOALL)
+    go_2_gene = purrr::map(go_2_gene, unique)
     go_desc = select(GO.db, keys = names(go_2_gene), columns = "TERM", keytype = "GOID")$TERM
     names(go_desc) = names(go_2_gene)
 
@@ -1431,7 +1432,12 @@ Instead of categoryCompare, lets try something else.
 We extract the statistical results, and only keep those GO terms that
 were significant in either set of genes.
 
-    # this needs to be run in a base R session, NOT RStudio!!
+    go_gene_count = purrr::imap_dfr(go_2_gene, function(.x, .y){
+      data.frame(GO = .y, n_gene = length(.x))
+    })
+    go_desc_df = data.frame(GO = names(go_desc),
+                            definition = go_desc,
+                            row.names = NULL)
     stats = comb_sig@statistics@statistic_data
     sig = comb_sig@statistics@significant@significant
     sig_any = rowSums(sig) > 0
@@ -1442,12 +1448,15 @@ were significant in either set of genes.
     ## [1] 538  11
 
     keep_stats = dplyr::left_join(keep_stats, unique(go_all_gene[, c("GOALL", "ONTOLOGYALL")]), by = c("GO" = "GOALL"))
+    keep_stats = dplyr::left_join(keep_stats, go_gene_count, by = "GO")
+    keep_stats = dplyr::left_join(keep_stats, go_desc_df, by = "GO")
     saveRDS(keep_stats, file = "data_files/go_stats.rds")
 
 Now lets break those GO terms into groups by semantic similarity. We do
 the Biological Process first, because it’s the biggest, and *usually*
 the most informative.
 
+    # this needs to be run in a base R session, NOT RStudio!!
     library(simplifyEnrichment)
     library(ComplexHeatmap)
     library(magrittr)
@@ -1462,7 +1471,7 @@ the most informative.
     test_mat = GO_similarity(test_go, "BP")
     test_cluster = cluster_terms(test_mat)
 
-    ## Cluster 500 terms by 'binary_cut'... 17 clusters, used 1.075942 secs.
+    ## Cluster 500 terms by 'binary_cut'... 23 clusters, used 1.054445 secs.
 
 You want to run this code **outside RStudio** (i.e. open just “R”).
 RStudio plot viewer does weird things that mean you can’t enlarge the
@@ -1475,23 +1484,119 @@ plot.
     # now we can run the actual data we have
     go_stats = readRDS("data_files/go_stats.rds")
     bp_sig = go_stats %>%
-      dplyr::filter(ONTOLOGYALL %in% "BP") %>%
-      dplyr::pull(GO)
-    bp_mat = GO_similarity(bp_sig, "BP")
+      dplyr::filter(ONTOLOGYALL %in% "BP", n_gene <= 500, n_gene >= 5)
+    bp_go = bp_sig$GO
+    bp_mat = GO_similarity(bp_go, "BP")
+    bp_clusters = cluster_terms(bp_mat)
 
-    bp_stats = go_stats %>%
-      dplyr::filter(ONTOLOGYALL %in% "BP")
-    bp_fdr = bp_stats %>%
-      dplyr::summarise(up = -1 * log10(up.padjust),
-                              down = -1 * log10(down.padjust)) %>%
-      as.matrix()
-    rownames(bp_fdr) = bp_stats$GO
+    ## Cluster 230 terms by 'binary_cut'... 15 clusters, used 0.3632767 secs.
+
+    bp_sig = bp_sig %>%
+      dplyr::mutate(up.fdr = -1 * log10(up.padjust),
+                    down.fdr = -1 * log10(down.padjust))
+    bp_fdr = as.matrix(bp_sig[, c("up.fdr", "down.fdr")])
+    rownames(bp_fdr) = bp_sig$GO
     library(circlize)
     col_map = colorRamp2(seq(0, 3, length.out = 20), viridis::viridis(20))
-    fdr_heatmap = Heatmap(bp_fdr, col_map, "-Log10(FDR)", cluster_rows = FALSE, width = unit(6, "cm"))
+    fdr_heatmap = Heatmap(bp_fdr, col_map, "-Log10(FDR)", cluster_rows = FALSE, cluster_columns = FALSE, width = unit(6, "cm"))
 
-    bp_heatmap = simplifyGO(bp_mat, ht_list = fdr_heatmap)
-
-    ## Cluster 390 terms by 'binary_cut'... 23 clusters, used 0.759372 secs.
+    # if we order by size, then we can see the clusters, and pull them out
+    # using another bit of data.
+    bp_heatmap = ht_clusters(bp_mat, bp_clusters, ht_list = fdr_heatmap,
+                             exclude_words = c("regulation", "process", "pathway"),
+                             order_by_size = TRUE)
 
 ![](README_files/figure-markdown_strict/similarity_go-1.png)
+
+    cluster_membership = data.frame(GO = rownames(bp_mat),
+                                    cluster = bp_clusters)
+    bp_sig = dplyr::left_join(bp_sig, cluster_membership, by = "GO")
+    cluster_sizes = bp_sig %>%
+      dplyr::group_by(cluster) %>%
+      dplyr::summarise(n_go = length(GO)) %>%
+      dplyr::arrange(dplyr::desc(n_go))
+    knitr::kable(cluster_sizes)
+
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: right;">cluster</th>
+<th style="text-align: right;">n_go</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">81</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">48</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">46</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">13</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">8</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">6</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">7</td>
+<td style="text-align: right;">6</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">13</td>
+<td style="text-align: right;">6</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">3</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">11</td>
+<td style="text-align: right;">3</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">14</td>
+<td style="text-align: right;">3</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">2</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">9</td>
+<td style="text-align: right;">2</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">12</td>
+<td style="text-align: right;">2</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">15</td>
+<td style="text-align: right;">1</td>
+</tr>
+</tbody>
+</table>
+
+Now we can see that the third cluster down, is actually those terms in
+**cluster 1**. If we are interested in those terms, because they have
+some of the best separation between the two, and are almost all **up**,
+we can get those terms and the genes annotated to them.
+
+    cluster_1 = bp_sig %>%
+      dplyr::filter(cluster %in% 1)
+
+Now with this information, can we find the genes that were annotated to
+the terms and their fold-changes?? **Hint, have the GO terms and their
+annotated genes in `go_2_gene`, and then have the up and down data
+available.**
