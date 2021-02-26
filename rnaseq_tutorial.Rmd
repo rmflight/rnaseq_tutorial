@@ -698,7 +698,7 @@ Now, how do we see what they are?
 One way is to use a graph, where each annotation is linked to others based on their shared genes.
 
 ```{r generate_graph}
-graph_sig = generate_annotation_graph(comb_sig)
+graph_sig = generate_annotation_graph(comb_sig, low_cut = 0, hi_cut = Inf)
 graph_sig
 ```
 
@@ -781,4 +781,50 @@ up_data = sig_res2 %>%
   dplyr::filter(symbol %in% sig_up)
 down_data = sig_res2 %>%
   dplyr::filter(symbol %in% sig_down)
+```
+
+#### Alternative Method for Visualizing Enrichment
+
+Instead of categoryCompare, lets try something else.
+
+We extract the statistical results, and only keep those GO terms that were significant in either set of genes.
+
+```{r stat_results}
+# this needs to be run in a base R session, NOT RStudio!!
+stats = comb_sig@statistics@statistic_data
+sig = comb_sig@statistics@significant@significant
+sig_any = rowSums(sig) > 0
+keep_stats = stats[sig_any, ]
+keep_stats$GO = rownames(keep_stats)
+dim(keep_stats)
+
+keep_stats = dplyr::left_join(keep_stats, unique(go_all_gene[, c("GOALL", "ONTOLOGYALL")]), by = c("GO" = "GOALL"))
+saveRDS(keep_stats, file = "data_files/go_stats.rds")
+```
+
+Now lets break those GO terms into groups by semantic similarity.
+We do the Biological Process first, because it's the biggest, and *usually* the most informative.
+
+```{r similar_go_terms, fig.width = 10, fig.height = 6}
+library(simplifyEnrichment)
+library(ComplexHeatmap)
+library(magrittr)
+go_stats = readRDS("data_files/go_stats.rds")
+bp_sig = go_stats %>%
+  dplyr::filter(ONTOLOGYALL %in% "BP") %>%
+  dplyr::pull(GO)
+bp_mat = GO_similarity(bp_sig, "BP")
+
+bp_stats = go_stats %>%
+  dplyr::filter(ONTOLOGYALL %in% "BP")
+bp_fdr = bp_stats %>%
+  dplyr::summarise(up = -1 * log10(up.padjust),
+                          down = -1 * log10(down.padjust)) %>%
+  as.matrix()
+rownames(bp_fdr) = bp_stats$GO
+library(circlize)
+col_map = colorRamp2(seq(0, 3, length.out = 20), viridis::viridis(20))
+fdr_heatmap = Heatmap(bp_fdr, col_map, "-Log10(FDR)", cluster_rows = FALSE, width = unit(6, "cm"))
+
+bp_heatmap = simplifyGO(bp_mat, ht_list = fdr_heatmap)
 ```

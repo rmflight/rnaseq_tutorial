@@ -29,6 +29,9 @@
             Analysis](#principal-components-analysis)
     -   [Differential Analysis](#differential-analysis)
     -   [Functional Enrichment](#functional-enrichment)
+        -   [Back to Original Data](#back-to-original-data)
+        -   [Alternative Method for Visualizing
+            Enrichment](#alternative-method-for-visualizing-enrichment)
 
 This RNASeq transcriptomics analysis will be carried out using R, a
 statistical programming language and interactive environment. I
@@ -559,8 +562,8 @@ This gives us 264 samples. Lets verify that we only have what we want:
       })
 
     ## [1] "Lung Adenocarcinoma"
-    ## [1] "stage iib"  "stage iiia" "stage iia" 
-    ## [4] "stage iiib" "stage iv"   "stage ii"  
+    ## [1] "stage iib"  "stage iiia" "stage iia"  "stage iiib"
+    ## [5] "stage iv"   "stage ii"  
     ## [1] "Primary Tumor"       "Solid Tissue Normal"
 
 We also need to add something that is a bit more useful as an identifier
@@ -818,45 +821,32 @@ And now we create the object that DESeq2 needs for the analysis.
     ## log2 fold change (MLE): disease cancer vs normal 
     ## Wald test p-value: disease cancer vs normal 
     ## DataFrame with 58037 rows and 6 columns
-    ##                      baseMean log2FoldChange
-    ##                     <numeric>      <numeric>
-    ## ENSG00000000003.14 2980.04372       1.047969
-    ## ENSG00000000005.5     7.60756       2.285406
-    ## ENSG00000000419.12 1501.37515       0.154944
-    ## ENSG00000000457.13 1121.24995       0.416828
-    ## ENSG00000000460.16  759.36940       1.117129
-    ## ...                       ...            ...
-    ## ENSG00000283695.1   0.0657895     -0.2853105
-    ## ENSG00000283696.1  37.1191671     -0.1679310
-    ## ENSG00000283697.1  42.4001328      0.1553250
-    ## ENSG00000283698.1   0.5227232      0.0909751
-    ## ENSG00000283699.1   0.0690275     -0.3883752
-    ##                        lfcSE      stat
-    ##                    <numeric> <numeric>
-    ## ENSG00000000003.14 0.1410078   7.43199
-    ## ENSG00000000005.5  0.7518177   3.03984
-    ## ENSG00000000419.12 0.1097474   1.41183
-    ## ENSG00000000457.13 0.0892688   4.66936
-    ## ENSG00000000460.16 0.1017870  10.97516
-    ## ...                      ...       ...
-    ## ENSG00000283695.1   1.932684 -0.147624
-    ## ENSG00000283696.1   0.166336 -1.009589
-    ## ENSG00000283697.1   0.116881  1.328910
-    ## ENSG00000283698.1   0.498562  0.182475
-    ## ENSG00000283699.1   1.670033 -0.232555
-    ##                         pvalue        padj
-    ##                      <numeric>   <numeric>
-    ## ENSG00000000003.14 1.06973e-13 1.22651e-12
-    ## ENSG00000000005.5  2.36704e-03 5.73466e-03
-    ## ENSG00000000419.12 1.58001e-01 2.37857e-01
-    ## ENSG00000000457.13 3.02136e-06 1.24007e-05
-    ## ENSG00000000460.16 5.03176e-28 2.60668e-26
-    ## ...                        ...         ...
-    ## ENSG00000283695.1     0.882640          NA
-    ## ENSG00000283696.1     0.312692    0.417595
-    ## ENSG00000283697.1     0.183878    0.269469
-    ## ENSG00000283698.1     0.855210    0.900477
-    ## ENSG00000283699.1     0.816107          NA
+    ##                      baseMean log2FoldChange     lfcSE
+    ##                     <numeric>      <numeric> <numeric>
+    ## ENSG00000000003.14 2980.04372       1.047969 0.1410078
+    ## ENSG00000000005.5     7.60756       2.285406 0.7518177
+    ## ENSG00000000419.12 1501.37515       0.154944 0.1097474
+    ## ENSG00000000457.13 1121.24995       0.416828 0.0892688
+    ## ENSG00000000460.16  759.36940       1.117129 0.1017870
+    ## ...                       ...            ...       ...
+    ## ENSG00000283695.1   0.0657895     -0.2853105  1.932684
+    ## ENSG00000283696.1  37.1191671     -0.1679310  0.166336
+    ## ENSG00000283697.1  42.4001328      0.1553250  0.116881
+    ## ENSG00000283698.1   0.5227232      0.0909751  0.498562
+    ## ENSG00000283699.1   0.0690275     -0.3883752  1.670033
+    ##                         stat      pvalue        padj
+    ##                    <numeric>   <numeric>   <numeric>
+    ## ENSG00000000003.14   7.43199 1.06973e-13 1.22651e-12
+    ## ENSG00000000005.5    3.03984 2.36704e-03 5.73466e-03
+    ## ENSG00000000419.12   1.41183 1.58001e-01 2.37857e-01
+    ## ENSG00000000457.13   4.66936 3.02136e-06 1.24007e-05
+    ## ENSG00000000460.16  10.97516 5.03176e-28 2.60668e-26
+    ## ...                      ...         ...         ...
+    ## ENSG00000283695.1  -0.147624    0.882640          NA
+    ## ENSG00000283696.1  -1.009589    0.312692    0.417595
+    ## ENSG00000283697.1   1.328910    0.183878    0.269469
+    ## ENSG00000283698.1   0.182475    0.855210    0.900477
+    ## ENSG00000283699.1  -0.232555    0.816107          NA
 
     # we convert to a data.frame, 
     # and then filter down to most significant and biggest changes
@@ -929,8 +919,8 @@ Now we create the `categoryCompare2` annotation object.
 
     ##       Annotation Type: GO 
     ##          Feature Type: UNKNOWN 
-    ## Number of Annotations: 22660 
-    ##       Number of Genes: 19216
+    ## Number of Annotations: 22687 
+    ##       Number of Genes: 19307
 
 ##### Enrichments
 
@@ -955,21 +945,21 @@ Now we create the `categoryCompare2` annotation object.
     ## $up
     ##    Enrichment Method:  
     ##      Annotation Type: GO 
-    ## Significant Features: 1434 
-    ##        Universe Size: 19216 
+    ## Significant Features: 1441 
+    ##        Universe Size: 19307 
     ## 
     ## $down
     ##    Enrichment Method:  
     ##      Annotation Type: GO 
-    ## Significant Features: 661 
-    ##        Universe Size: 19216 
+    ## Significant Features: 672 
+    ##        Universe Size: 19307 
     ## 
     ## 
     ## Slot "annotation":
     ##       Annotation Type: GO 
     ##          Feature Type: UNKNOWN 
-    ## Number of Annotations: 22660 
-    ##       Number of Genes: 19216 
+    ## Number of Annotations: 22687 
+    ##       Number of Genes: 19307 
     ## 
     ## Slot "statistics":
     ## Signficance Cutoffs:
@@ -978,10 +968,10 @@ Now we create the `categoryCompare2` annotation object.
     ## 
     ## Counts:
     ##    up down counts
-    ## G1  1    1     22
+    ## G1  1    1     23
     ## G2  1    0    175
-    ## G3  0    1    370
-    ## G4  0    0  22093
+    ## G3  0    1    340
+    ## G4  0    0  22149
 
 Very cool, we have shared annotations to both up and down genes, as well
 as some that are specific to each. Now, how do we see what they are?
@@ -989,16 +979,16 @@ as some that are specific to each. Now, how do we see what they are?
 One way is to use a graph, where each annotation is linked to others
 based on their shared genes.
 
-    graph_sig = generate_annotation_graph(comb_sig)
+    graph_sig = generate_annotation_graph(comb_sig, low_cut = 0, hi_cut = Inf)
     graph_sig
 
     ## A cc_graph with
-    ## Number of Nodes = 345 
-    ## Number of Edges = 34030 
+    ## Number of Nodes = 538 
+    ## Number of Edges = 110852 
     ##    up down counts
-    ## G1  1    1      6
-    ## G2  1    0    140
-    ## G3  0    1    199
+    ## G1  1    1     23
+    ## G2  1    0    175
+    ## G3  0    1    340
 
 That is a **lot** of edges! Like, way, way too many. Lets remove a bunch
 of them. What we are going to do is remove those edges where less than
@@ -1008,12 +998,12 @@ of them. What we are going to do is remove those edges where less than
     graph_sig
 
     ## A cc_graph with
-    ## Number of Nodes = 345 
-    ## Number of Edges = 331 
+    ## Number of Nodes = 538 
+    ## Number of Edges = 577 
     ##    up down counts
-    ## G1  1    1      6
-    ## G2  1    0    140
-    ## G3  0    1    199
+    ## G1  1    1     23
+    ## G2  1    0    175
+    ## G3  0    1    340
 
 Much better!
 
@@ -1022,7 +1012,7 @@ Now lets generate color for each group, and do some grouping.
     assign_sig = annotation_combinations(graph_sig)
     assign_sig = assign_colors(assign_sig)
     communities_sig = assign_communities(graph_sig)
-    community_labels = label_go_communities(communities_sig)
+    community_labels = label_communities(communities_sig, go_annotation)
 
 We can look at these in a table. We will only display the first 10 rows
 here, you can look at the full table in a [tab delimited
@@ -1035,19 +1025,20 @@ file](data_files/enrichment_table.txt).
 
 <table>
 <colgroup>
-<col style="width: 5%" />
-<col style="width: 33%" />
+<col style="width: 6%" />
+<col style="width: 28%" />
 <col style="width: 5%" />
 <col style="width: 2%" />
 <col style="width: 4%" />
 <col style="width: 6%" />
 <col style="width: 5%" />
-<col style="width: 5%" />
+<col style="width: 6%" />
 <col style="width: 3%" />
 <col style="width: 5%" />
 <col style="width: 7%" />
 <col style="width: 6%" />
 <col style="width: 7%" />
+<col style="width: 3%" />
 </colgroup>
 <thead>
 <tr class="header">
@@ -1064,12 +1055,13 @@ file](data_files/enrichment_table.txt).
 <th style="text-align: right;">down.expected</th>
 <th style="text-align: right;">down.counts</th>
 <th style="text-align: right;">down.padjust</th>
+<th style="text-align: right;">group</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
 <td style="text-align: left;"></td>
-<td style="text-align: left;"><strong>regulation of chromosome segregation</strong></td>
+<td style="text-align: left;"><strong>secretion</strong></td>
 <td style="text-align: left;"></td>
 <td style="text-align: right;">NA</td>
 <td style="text-align: right;">NA</td>
@@ -1081,291 +1073,311 @@ file](data_files/enrichment_table.txt).
 <td style="text-align: right;">NA</td>
 <td style="text-align: right;">NA</td>
 <td style="text-align: right;">NA</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;"><a href="GO:0007091" class="uri">GO:0007091</a></td>
-<td style="text-align: left;">metaphase/anaphase transition of mitotic cell cycle</td>
-<td style="text-align: left;">up</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">5.27</td>
-<td style="text-align: right;">4.03</td>
-<td style="text-align: right;">16</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">1.00</td>
-<td style="text-align: right;">0.00</td>
-<td style="text-align: right;">1.86</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">1</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;"><a href="GO:0007094" class="uri">GO:0007094</a></td>
-<td style="text-align: left;">mitotic spindle assembly checkpoint</td>
-<td style="text-align: left;">up</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">6.81</td>
-<td style="text-align: right;">2.54</td>
-<td style="text-align: right;">12</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">1.00</td>
-<td style="text-align: right;">0.00</td>
-<td style="text-align: right;">1.17</td>
-<td style="text-align: right;">0</td>
 <td style="text-align: right;">1</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;"><a href="GO:0010965" class="uri">GO:0010965</a></td>
-<td style="text-align: left;">regulation of mitotic sister chromatid separation</td>
-<td style="text-align: left;">up</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">5.78</td>
-<td style="text-align: right;">4.25</td>
-<td style="text-align: right;">18</td>
-<td style="text-align: right;">0</td>
+<td style="text-align: left;"><a href="GO:0002274" class="uri">GO:0002274</a></td>
+<td style="text-align: left;">myeloid leukocyte activation</td>
+<td style="text-align: left;">down</td>
 <td style="text-align: right;">1.00</td>
-<td style="text-align: right;">0.00</td>
-<td style="text-align: right;">1.96</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">1</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;"><a href="GO:0030071" class="uri">GO:0030071</a></td>
-<td style="text-align: left;">regulation of mitotic metaphase/anaphase transition</td>
-<td style="text-align: left;">up</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">5.72</td>
-<td style="text-align: right;">3.81</td>
-<td style="text-align: right;">16</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">1.00</td>
-<td style="text-align: right;">0.00</td>
-<td style="text-align: right;">1.75</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">1</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;"><a href="GO:0031577" class="uri">GO:0031577</a></td>
-<td style="text-align: left;">spindle checkpoint</td>
-<td style="text-align: left;">up</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">6.81</td>
-<td style="text-align: right;">2.54</td>
-<td style="text-align: right;">12</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">1.00</td>
-<td style="text-align: right;">0.00</td>
-<td style="text-align: right;">1.17</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">1</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;"><a href="GO:0033045" class="uri">GO:0033045</a></td>
-<td style="text-align: left;">regulation of sister chromatid segregation</td>
-<td style="text-align: left;">up</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">4.25</td>
-<td style="text-align: right;">5.90</td>
-<td style="text-align: right;">20</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">1.00</td>
-<td style="text-align: right;">0.00</td>
-<td style="text-align: right;">2.72</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">1</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;"><a href="GO:0033046" class="uri">GO:0033046</a></td>
-<td style="text-align: left;">negative regulation of sister chromatid segregation</td>
-<td style="text-align: left;">up</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">6.47</td>
-<td style="text-align: right;">3.28</td>
-<td style="text-align: right;">15</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">1.00</td>
-<td style="text-align: right;">0.00</td>
-<td style="text-align: right;">1.51</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">1</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;"><a href="GO:0033047" class="uri">GO:0033047</a></td>
-<td style="text-align: left;">regulation of mitotic sister chromatid segregation</td>
-<td style="text-align: left;">up</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">4.60</td>
-<td style="text-align: right;">5.00</td>
-<td style="text-align: right;">18</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">1.00</td>
-<td style="text-align: right;">0.00</td>
-<td style="text-align: right;">2.30</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">1</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;"><a href="GO:0033048" class="uri">GO:0033048</a></td>
-<td style="text-align: left;">negative regulation of mitotic sister chromatid segregation</td>
-<td style="text-align: left;">up</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">6.25</td>
-<td style="text-align: right;">3.13</td>
-<td style="text-align: right;">14</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">1.00</td>
-<td style="text-align: right;">0.00</td>
-<td style="text-align: right;">1.44</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">1</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;"><a href="GO:0044784" class="uri">GO:0044784</a></td>
-<td style="text-align: left;">metaphase/anaphase transition of cell cycle</td>
-<td style="text-align: left;">up</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">5.00</td>
-<td style="text-align: right;">4.18</td>
-<td style="text-align: right;">16</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">1.00</td>
-<td style="text-align: right;">0.00</td>
-<td style="text-align: right;">1.93</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">1</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;"><a href="GO:0045839" class="uri">GO:0045839</a></td>
-<td style="text-align: left;">negative regulation of mitotic nuclear division</td>
-<td style="text-align: left;">up</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">5.07</td>
-<td style="text-align: right;">3.88</td>
-<td style="text-align: right;">15</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">0.84</td>
 <td style="text-align: right;">0.55</td>
-<td style="text-align: right;">1.79</td>
-<td style="text-align: right;">1</td>
+<td style="text-align: right;">48.81</td>
+<td style="text-align: right;">28</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">2.02</td>
+<td style="text-align: right;">22.76</td>
+<td style="text-align: right;">43</td>
+<td style="text-align: right;">0.00</td>
 <td style="text-align: right;">1</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;"><a href="GO:0045841" class="uri">GO:0045841</a></td>
-<td style="text-align: left;">negative regulation of mitotic metaphase/anaphase transition</td>
-<td style="text-align: left;">up</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">6.24</td>
-<td style="text-align: right;">2.69</td>
-<td style="text-align: right;">12</td>
-<td style="text-align: right;">0</td>
+<td style="text-align: left;"><a href="GO:0002275" class="uri">GO:0002275</a></td>
+<td style="text-align: left;">myeloid cell activation involved in immune response</td>
+<td style="text-align: left;">down</td>
 <td style="text-align: right;">1.00</td>
-<td style="text-align: right;">0.00</td>
-<td style="text-align: right;">1.24</td>
+<td style="text-align: right;">0.59</td>
+<td style="text-align: right;">40.45</td>
+<td style="text-align: right;">25</td>
+<td style="text-align: right;">1.00</td>
 <td style="text-align: right;">0</td>
+<td style="text-align: right;">2.09</td>
+<td style="text-align: right;">18.86</td>
+<td style="text-align: right;">37</td>
+<td style="text-align: right;">0.01</td>
 <td style="text-align: right;">1</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;"><a href="GO:0051304" class="uri">GO:0051304</a></td>
-<td style="text-align: left;">chromosome separation</td>
-<td style="text-align: left;">up</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">3.87</td>
-<td style="text-align: right;">6.64</td>
-<td style="text-align: right;">21</td>
-<td style="text-align: right;">0</td>
+<td style="text-align: left;"><a href="GO:0002283" class="uri">GO:0002283</a></td>
+<td style="text-align: left;">neutrophil activation involved in immune response</td>
+<td style="text-align: left;">down</td>
 <td style="text-align: right;">1.00</td>
-<td style="text-align: right;">0.00</td>
-<td style="text-align: right;">3.06</td>
+<td style="text-align: right;">0.58</td>
+<td style="text-align: right;">36.12</td>
+<td style="text-align: right;">22</td>
+<td style="text-align: right;">1.00</td>
 <td style="text-align: right;">0</td>
+<td style="text-align: right;">2.15</td>
+<td style="text-align: right;">16.85</td>
+<td style="text-align: right;">34</td>
+<td style="text-align: right;">0.01</td>
 <td style="text-align: right;">1</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;"><a href="GO:0051306" class="uri">GO:0051306</a></td>
-<td style="text-align: left;">mitotic sister chromatid separation</td>
-<td style="text-align: left;">up</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">5.37</td>
-<td style="text-align: right;">4.48</td>
-<td style="text-align: right;">18</td>
-<td style="text-align: right;">0</td>
+<td style="text-align: left;"><a href="GO:0002444" class="uri">GO:0002444</a></td>
+<td style="text-align: left;">myeloid leukocyte mediated immunity</td>
+<td style="text-align: left;">down</td>
 <td style="text-align: right;">1.00</td>
-<td style="text-align: right;">0.00</td>
-<td style="text-align: right;">2.06</td>
+<td style="text-align: right;">0.56</td>
+<td style="text-align: right;">40.98</td>
+<td style="text-align: right;">24</td>
+<td style="text-align: right;">1.00</td>
 <td style="text-align: right;">0</td>
+<td style="text-align: right;">2.13</td>
+<td style="text-align: right;">19.11</td>
+<td style="text-align: right;">38</td>
+<td style="text-align: right;">0.00</td>
 <td style="text-align: right;">1</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;"><a href="GO:0051784" class="uri">GO:0051784</a></td>
-<td style="text-align: left;">negative regulation of nuclear division</td>
-<td style="text-align: left;">up</td>
+<td style="text-align: left;"><a href="GO:0002446" class="uri">GO:0002446</a></td>
+<td style="text-align: left;">neutrophil mediated immunity</td>
+<td style="text-align: left;">down</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">0.60</td>
+<td style="text-align: right;">36.94</td>
+<td style="text-align: right;">23</td>
+<td style="text-align: right;">1.00</td>
 <td style="text-align: right;">0</td>
-<td style="text-align: right;">5.37</td>
-<td style="text-align: right;">4.48</td>
-<td style="text-align: right;">18</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">0.88</td>
-<td style="text-align: right;">0.47</td>
-<td style="text-align: right;">2.06</td>
-<td style="text-align: right;">1</td>
+<td style="text-align: right;">2.24</td>
+<td style="text-align: right;">17.23</td>
+<td style="text-align: right;">36</td>
+<td style="text-align: right;">0.00</td>
 <td style="text-align: right;">1</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;"><a href="GO:0051983" class="uri">GO:0051983</a></td>
-<td style="text-align: left;">regulation of chromosome segregation</td>
-<td style="text-align: left;">up</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">4.42</td>
-<td style="text-align: right;">7.46</td>
-<td style="text-align: right;">26</td>
-<td style="text-align: right;">0</td>
+<td style="text-align: left;"><a href="GO:0006887" class="uri">GO:0006887</a></td>
+<td style="text-align: left;">exocytosis</td>
+<td style="text-align: left;">down</td>
+<td style="text-align: right;">0.96</td>
+<td style="text-align: right;">0.79</td>
+<td style="text-align: right;">66.95</td>
+<td style="text-align: right;">54</td>
 <td style="text-align: right;">1.00</td>
-<td style="text-align: right;">0.00</td>
-<td style="text-align: right;">3.44</td>
 <td style="text-align: right;">0</td>
+<td style="text-align: right;">1.96</td>
+<td style="text-align: right;">31.22</td>
+<td style="text-align: right;">57</td>
+<td style="text-align: right;">0.00</td>
 <td style="text-align: right;">1</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;"><a href="GO:0051985" class="uri">GO:0051985</a></td>
-<td style="text-align: left;">negative regulation of chromosome segregation</td>
-<td style="text-align: left;">up</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">6.26</td>
-<td style="text-align: right;">3.36</td>
-<td style="text-align: right;">15</td>
-<td style="text-align: right;">0</td>
+<td style="text-align: left;"><a href="GO:0032940" class="uri">GO:0032940</a></td>
+<td style="text-align: left;">secretion by cell</td>
+<td style="text-align: left;">down</td>
+<td style="text-align: right;">0.61</td>
+<td style="text-align: right;">0.97</td>
+<td style="text-align: right;">105.39</td>
+<td style="text-align: right;">103</td>
 <td style="text-align: right;">1.00</td>
-<td style="text-align: right;">0.00</td>
-<td style="text-align: right;">1.55</td>
 <td style="text-align: right;">0</td>
+<td style="text-align: right;">1.92</td>
+<td style="text-align: right;">49.15</td>
+<td style="text-align: right;">86</td>
+<td style="text-align: right;">0.00</td>
 <td style="text-align: right;">1</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;"><a href="GO:0071173" class="uri">GO:0071173</a></td>
-<td style="text-align: left;">spindle assembly checkpoint</td>
-<td style="text-align: left;">up</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">6.81</td>
-<td style="text-align: right;">2.54</td>
-<td style="text-align: right;">12</td>
-<td style="text-align: right;">0</td>
+<td style="text-align: left;"><a href="GO:0042119" class="uri">GO:0042119</a></td>
+<td style="text-align: left;">neutrophil activation</td>
+<td style="text-align: left;">down</td>
 <td style="text-align: right;">1.00</td>
+<td style="text-align: right;">0.57</td>
+<td style="text-align: right;">37.02</td>
+<td style="text-align: right;">22</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">2.10</td>
+<td style="text-align: right;">17.26</td>
+<td style="text-align: right;">34</td>
+<td style="text-align: right;">0.01</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><a href="GO:0045055" class="uri">GO:0045055</a></td>
+<td style="text-align: left;">regulated exocytosis</td>
+<td style="text-align: left;">down</td>
+<td style="text-align: right;">0.94</td>
+<td style="text-align: right;">0.80</td>
+<td style="text-align: right;">58.66</td>
+<td style="text-align: right;">48</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">2.14</td>
+<td style="text-align: right;">27.36</td>
+<td style="text-align: right;">54</td>
 <td style="text-align: right;">0.00</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><a href="GO:0046903" class="uri">GO:0046903</a></td>
+<td style="text-align: left;">secretion</td>
+<td style="text-align: left;">down</td>
+<td style="text-align: right;">0.42</td>
+<td style="text-align: right;">1.02</td>
+<td style="text-align: right;">115.61</td>
+<td style="text-align: right;">118</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">2.00</td>
+<td style="text-align: right;">53.91</td>
+<td style="text-align: right;">97</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><a href="GO:0140352" class="uri">GO:0140352</a></td>
+<td style="text-align: left;">export from cell</td>
+<td style="text-align: left;">down</td>
+<td style="text-align: right;">0.61</td>
+<td style="text-align: right;">0.98</td>
+<td style="text-align: right;">109.34</td>
+<td style="text-align: right;">107</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1.99</td>
+<td style="text-align: right;">50.99</td>
+<td style="text-align: right;">92</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;"><strong>circulatory system development</strong></td>
+<td style="text-align: left;"></td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: right;">2</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><a href="GO:0001525" class="uri">GO:0001525</a></td>
+<td style="text-align: left;">angiogenesis</td>
+<td style="text-align: left;">down</td>
+<td style="text-align: right;">0.90</td>
+<td style="text-align: right;">0.81</td>
+<td style="text-align: right;">44.56</td>
+<td style="text-align: right;">37</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">3.24</td>
+<td style="text-align: right;">20.78</td>
+<td style="text-align: right;">59</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">2</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><a href="GO:0001568" class="uri">GO:0001568</a></td>
+<td style="text-align: left;">blood vessel development</td>
+<td style="text-align: left;">down</td>
+<td style="text-align: right;">0.73</td>
+<td style="text-align: right;">0.92</td>
+<td style="text-align: right;">58.07</td>
+<td style="text-align: right;">54</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">2.89</td>
+<td style="text-align: right;">27.08</td>
+<td style="text-align: right;">69</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">2</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><a href="GO:0001944" class="uri">GO:0001944</a></td>
+<td style="text-align: left;">vasculature development</td>
+<td style="text-align: left;">down</td>
+<td style="text-align: right;">0.79</td>
+<td style="text-align: right;">0.90</td>
+<td style="text-align: right;">60.53</td>
+<td style="text-align: right;">55</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">2.91</td>
+<td style="text-align: right;">28.23</td>
+<td style="text-align: right;">72</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">2</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><a href="GO:0035239" class="uri">GO:0035239</a></td>
+<td style="text-align: left;">tube morphogenesis</td>
+<td style="text-align: left;">down</td>
+<td style="text-align: right;">0.36</td>
+<td style="text-align: right;">1.05</td>
+<td style="text-align: right;">69.86</td>
+<td style="text-align: right;">73</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">2.59</td>
+<td style="text-align: right;">32.58</td>
+<td style="text-align: right;">75</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">2</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><a href="GO:0035295" class="uri">GO:0035295</a></td>
+<td style="text-align: left;">tube development</td>
+<td style="text-align: left;">down</td>
+<td style="text-align: right;">0.08</td>
 <td style="text-align: right;">1.17</td>
+<td style="text-align: right;">84.41</td>
+<td style="text-align: right;">97</td>
+<td style="text-align: right;">0.91</td>
 <td style="text-align: right;">0</td>
-<td style="text-align: right;">1</td>
+<td style="text-align: right;">2.54</td>
+<td style="text-align: right;">39.37</td>
+<td style="text-align: right;">88</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">2</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><a href="GO:0045765" class="uri">GO:0045765</a></td>
+<td style="text-align: left;">regulation of angiogenesis</td>
+<td style="text-align: left;">down</td>
+<td style="text-align: right;">0.92</td>
+<td style="text-align: right;">0.76</td>
+<td style="text-align: right;">29.48</td>
+<td style="text-align: right;">23</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">2.70</td>
+<td style="text-align: right;">13.75</td>
+<td style="text-align: right;">34</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">2</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;"><a href="GO:0071174" class="uri">GO:0071174</a></td>
-<td style="text-align: left;">mitotic spindle checkpoint</td>
-<td style="text-align: left;">up</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">6.81</td>
-<td style="text-align: right;">2.54</td>
-<td style="text-align: right;">12</td>
-<td style="text-align: right;">0</td>
+<td style="text-align: left;"><a href="GO:0048514" class="uri">GO:0048514</a></td>
+<td style="text-align: left;">blood vessel morphogenesis</td>
+<td style="text-align: left;">down</td>
+<td style="text-align: right;">0.73</td>
+<td style="text-align: right;">0.92</td>
+<td style="text-align: right;">51.65</td>
+<td style="text-align: right;">48</td>
 <td style="text-align: right;">1.00</td>
-<td style="text-align: right;">0.00</td>
-<td style="text-align: right;">1.17</td>
 <td style="text-align: right;">0</td>
-<td style="text-align: right;">1</td>
+<td style="text-align: right;">2.96</td>
+<td style="text-align: right;">24.09</td>
+<td style="text-align: right;">63</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">2</td>
 </tr>
 </tbody>
 </table>
@@ -1381,3 +1393,83 @@ And put them in a network widget:
     generate_legend(assign_sig)
 
 ![](README_files/figure-markdown_strict/show_legend-1.png)
+
+#### Back to Original Data
+
+A lot of times, we want to be able to query our original data set,
+asking what genes are annotated to the GO terms as well as the
+information about them. For this to work, we have to first create the
+correct mapping of SYMBOL to genes.
+
+    all_gene_symbol = sig_res %>%
+      dplyr::select(gene_id, symbol)
+    symbol_2_gene = purrr::map_df(seq(1, nrow(all_gene_symbol)),
+                                  function(in_row){
+                                    data.frame(gene_id = all_gene_symbol$gene_id[in_row],
+                                               symbol = unlist(all_gene_symbol$symbol[in_row]))
+                                  })
+
+And then merge this back with the original data.
+
+    sig_res2 = dplyr::left_join(
+      sig_res %>%
+        dplyr::select(-symbol), all_gene_symbol, by = "gene_id"
+    )
+
+Nice. Now we can filter this back down to what is specific to the up and
+down enrichments we had earlier.
+
+    up_data = sig_res2 %>%
+      dplyr::filter(symbol %in% sig_up)
+    down_data = sig_res2 %>%
+      dplyr::filter(symbol %in% sig_down)
+
+#### Alternative Method for Visualizing Enrichment
+
+Instead of categoryCompare, lets try something else.
+
+We extract the statistical results, and only keep those GO terms that
+were significant in either set of genes.
+
+    # this needs to be run in a base R session, NOT RStudio!!
+    stats = comb_sig@statistics@statistic_data
+    sig = comb_sig@statistics@significant@significant
+    sig_any = rowSums(sig) > 0
+    keep_stats = stats[sig_any, ]
+    keep_stats$GO = rownames(keep_stats)
+    dim(keep_stats)
+
+    ## [1] 538  11
+
+    keep_stats = dplyr::left_join(keep_stats, unique(go_all_gene[, c("GOALL", "ONTOLOGYALL")]), by = c("GO" = "GOALL"))
+    saveRDS(keep_stats, file = "data_files/go_stats.rds")
+
+Now lets break those GO terms into groups by semantic similarity. We do
+the Biological Process first, because it’s the biggest, and *usually*
+the most informative.
+
+    library(simplifyEnrichment)
+    library(ComplexHeatmap)
+    library(magrittr)
+    go_stats = readRDS("data_files/go_stats.rds")
+    bp_sig = go_stats %>%
+      dplyr::filter(ONTOLOGYALL %in% "BP") %>%
+      dplyr::pull(GO)
+    bp_mat = GO_similarity(bp_sig, "BP")
+
+    bp_stats = go_stats %>%
+      dplyr::filter(ONTOLOGYALL %in% "BP")
+    bp_fdr = bp_stats %>%
+      dplyr::summarise(up = -1 * log10(up.padjust),
+                              down = -1 * log10(down.padjust)) %>%
+      as.matrix()
+    rownames(bp_fdr) = bp_stats$GO
+    library(circlize)
+    col_map = colorRamp2(seq(0, 3, length.out = 20), viridis::viridis(20))
+    fdr_heatmap = Heatmap(bp_fdr, col_map, "-Log10(FDR)", cluster_rows = FALSE, width = unit(6, "cm"))
+
+    bp_heatmap = simplifyGO(bp_mat, ht_list = fdr_heatmap)
+
+    ## Cluster 390 terms by 'binary_cut'... 23 clusters, used 0.8559582 secs.
+
+![](README_files/figure-markdown_strict/similar_go_terms-1.png)
