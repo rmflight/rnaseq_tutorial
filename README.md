@@ -1451,6 +1451,28 @@ the most informative.
     library(simplifyEnrichment)
     library(ComplexHeatmap)
     library(magrittr)
+
+    # first test that this will actually run.
+    # If the code below takes > 10 seconds (seriously, count to 10), kill it, 
+    # and download and install the 2.1.0 version of the
+    # cluster package
+    # https://cran.r-project.org/src/contrib/Archive/cluster/cluster_2.1.0.tar.gz
+    # remotes::install_local("path_2_downloaded_cluster_2.1.0.tar.gz")
+    test_go = random_GO(500)
+    test_mat = GO_similarity(test_go, "BP")
+    test_cluster = cluster_terms(test_mat)
+
+    ## Cluster 500 terms by 'binary_cut'... 17 clusters, used 1.075942 secs.
+
+You want to run this code **outside RStudio** (i.e. open just “R”).
+RStudio plot viewer does weird things that mean you can’t enlarge the
+plot.
+
+    library(simplifyEnrichment)
+    library(ComplexHeatmap)
+    library(magrittr)
+
+    # now we can run the actual data we have
     go_stats = readRDS("data_files/go_stats.rds")
     bp_sig = go_stats %>%
       dplyr::filter(ONTOLOGYALL %in% "BP") %>%
@@ -1470,6 +1492,6 @@ the most informative.
 
     bp_heatmap = simplifyGO(bp_mat, ht_list = fdr_heatmap)
 
-    ## Cluster 390 terms by 'binary_cut'... 23 clusters, used 0.8559582 secs.
+    ## Cluster 390 terms by 'binary_cut'... 23 clusters, used 0.759372 secs.
 
-![](README_files/figure-markdown_strict/similar_go_terms-1.png)
+![](README_files/figure-markdown_strict/similarity_go-1.png)

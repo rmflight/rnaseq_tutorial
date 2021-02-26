@@ -805,10 +805,32 @@ saveRDS(keep_stats, file = "data_files/go_stats.rds")
 Now lets break those GO terms into groups by semantic similarity.
 We do the Biological Process first, because it's the biggest, and *usually* the most informative.
 
-```{r similar_go_terms, fig.width = 10, fig.height = 6}
+```{r test_runing}
 library(simplifyEnrichment)
 library(ComplexHeatmap)
 library(magrittr)
+
+# first test that this will actually run.
+# If the code below takes > 10 seconds (seriously, count to 10), kill it, 
+# and download and install the 2.1.0 version of the
+# cluster package
+# https://cran.r-project.org/src/contrib/Archive/cluster/cluster_2.1.0.tar.gz
+# remotes::install_local("path_2_downloaded_cluster_2.1.0.tar.gz")
+test_go = random_GO(500)
+test_mat = GO_similarity(test_go, "BP")
+test_cluster = cluster_terms(test_mat)
+```
+
+
+You want to run this code **outside RStudio** (i.e. open just "R").
+RStudio plot viewer does weird things that mean you can't enlarge the plot.
+
+```{r similarity_go, fig.width = 10, fig.height = 6}
+library(simplifyEnrichment)
+library(ComplexHeatmap)
+library(magrittr)
+
+# now we can run the actual data we have
 go_stats = readRDS("data_files/go_stats.rds")
 bp_sig = go_stats %>%
   dplyr::filter(ONTOLOGYALL %in% "BP") %>%
