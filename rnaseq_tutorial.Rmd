@@ -834,7 +834,7 @@ test_cluster = cluster_terms(test_mat)
 You want to run this code **outside RStudio** (i.e. open just "R").
 RStudio plot viewer does weird things that mean you can't enlarge the plot.
 
-```{r similarity_go, fig.width = 10, fig.height = 6}
+```{r similar_go_terms, fig.width = 10, fig.height = 6}
 library(simplifyEnrichment)
 library(ComplexHeatmap)
 library(magrittr)

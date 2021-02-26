@@ -1471,7 +1471,7 @@ the most informative.
     test_mat = GO_similarity(test_go, "BP")
     test_cluster = cluster_terms(test_mat)
 
-    ## Cluster 500 terms by 'binary_cut'... 23 clusters, used 1.054445 secs.
+    ## Cluster 500 terms by 'binary_cut'... 17 clusters, used 1.237396 secs.
 
 You want to run this code **outside RStudio** (i.e. open just “R”).
 RStudio plot viewer does weird things that mean you can’t enlarge the
@@ -1489,7 +1489,7 @@ plot.
     bp_mat = GO_similarity(bp_go, "BP")
     bp_clusters = cluster_terms(bp_mat)
 
-    ## Cluster 230 terms by 'binary_cut'... 15 clusters, used 0.3632767 secs.
+    ## Cluster 230 terms by 'binary_cut'... 15 clusters, used 0.4439886 secs.
 
     bp_sig = bp_sig %>%
       dplyr::mutate(up.fdr = -1 * log10(up.padjust),
@@ -1506,7 +1506,7 @@ plot.
                              exclude_words = c("regulation", "process", "pathway"),
                              order_by_size = TRUE)
 
-![](README_files/figure-markdown_strict/similarity_go-1.png)
+![](README_files/figure-markdown_strict/similar_go_terms-1.png)
 
     cluster_membership = data.frame(GO = rownames(bp_mat),
                                     cluster = bp_clusters)
