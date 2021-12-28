@@ -188,6 +188,7 @@ We can then use `BiocManager` to install biologically related packages.
     install.packages("rmarkdown")
     # installs a package used for quality control and analysis
     remotes::install_github("MoseleyBioinformaticsLab/visualizationQualityControl")
+    remotes::install_github("MoseleyBioinformaticsLab/ICIKendallTau")
     remotes::install_github("rmflight/categoryCompare2")
 
 While these are installing, you should notice lots of other packages
@@ -647,14 +648,15 @@ fit.
 We use a special correlation that is able to incorporate missing values
 when it calculates a pairwise ranked correlation. You can read more
 about it
-[here](http://moseleybioinformaticslab.github.io/visualizationQualityControl/articles/ici-kendalltau.html).
+[here](https://moseleybioinformaticslab.github.io/ICIKendallTau/articles/ici-kendalltau.html).
 Notice here we used the **sub** matrix of 6000 genes so it will actually
 calculate. The correlations for this group are also available in the
 GitHub repo, under `data_files/adeno_cor_6K.rds`.
 
     library(furrr)
     plan(multicore)
-    sample_cor = visqc_ici_kendallt(t(adeno_raw_counts))
+    library(ICIKendallTau)
+    sample_cor = ici_kendallt(t(adeno_raw_counts))
 
     saveRDS(sample_cor, file = here::here("data_files/adeno_cor_6K.rds"))
 
