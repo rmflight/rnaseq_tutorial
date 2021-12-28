@@ -656,7 +656,7 @@ GitHub repo, under `data_files/adeno_cor_6K.rds`.
     library(furrr)
     plan(multicore)
     library(ICIKendallTau)
-    sample_cor = ici_kendallt(t(adeno_raw_counts))
+    sample_cor = ici_kendalltau(t(adeno_raw_counts))
 
     saveRDS(sample_cor, file = here::here("data_files/adeno_cor_6K.rds"))
 
